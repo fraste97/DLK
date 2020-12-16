@@ -1,5 +1,23 @@
-+-*/
---++-+
-.:;  //commento
-//
-.
+intero: raggio, circonferenza, i;
+decimale pi;
+stringa: richiesta;
+
+inizio
+    i=1;
+    pi=3.14;
+    richiesta="Inserire il raggio del cerchio numero";
+    ripeti 10 volte:
+        scrivi(richiesta);
+        scrivi(i);
+        inserisci(raggio);
+        se(raggio == 0 o raggio < 0) vero fai:
+            stop;
+        fine;
+        circonferenza = 2*pi*raggio;
+        se(circonferenza < 100) vero fai:
+            scrivi("\nIl cerchio è piccolo!\n");
+        se falso fai:
+            scrivi("\nIl cerchio è grande!\n")
+        fine;
+    fine;
+fine.
