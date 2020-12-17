@@ -44,9 +44,9 @@ class Token:
 
     def __repr__(self):
         if self.value is None:
-            return f'Type:{self.type}\n'
+            return f'{self.type}'
         else:
-            return f'Type:{self.type} :: Value:{self.value}\n'
+            return f'{self.type}::{self.value}'
 
 
 class Lexer:
@@ -193,7 +193,7 @@ class Lexer:
         dot = 0
         while self.char is not None and (self.char in DIGITS or self.char == '.'):
             if dot == 1 and self.char == '.':
-                dot +=1
+                dot += 1
                 break
             elif self.char == '.':
                 dot += 1
@@ -215,7 +215,7 @@ class Lexer:
         while self.char is not None and self.char != '"':
             str_const += self.char
             self.advance()
-        #str_const = bytes(str_const, "utf-8").decode("unicode_escape")
+        # str_const = bytes(str_const, "utf-8").decode("unicode_escape")
         if self.char is None:
             self.error('"_expected')
             return -1
@@ -237,6 +237,92 @@ class Lexer:
         elif error_type == 'too_many_dots':
             print(f'Riga {self.xy[1]}, colonna {self.xy[0]} --> Togliere un \'.\'')
 
+
+##############################################################################################
+##############################################################################################
+##############################################################################################
+##############################################################################################
+
+
+class ConstNode:
+    def __init__(self, token):
+        self.token = token
+
+    def __repr__(self):
+        return f'{self.token}'
+
+
+class MathOperationNode:
+    def __init__(self, left_child, operator, right_child):
+        self.left_child = left_child
+        self.right_child = right_child
+        self.operator = operator
+
+    def __repr__(self):
+        return f'({self.left_child}, {self.operator}, {self.right_child})'
+
+
+class Parser:
+    def __init__(self, tokens_list):
+        self.tokens_list = tokens_list
+        self.token = None
+        self.pos = -1
+        self.advance()
+
+    def advance(self):
+        self.pos += 1
+        if self.pos < len(self.tokens_list):
+            self.token = self.tokens_list[self.pos]
+
+    def parse(self):
+        return self.math_expr()
+
+    def math_expr(self):
+        lhs = self.math_term()
+
+        while self.token.type in (PLUS_TOKEN, MIN_TOKEN):
+            op = self.token
+            self.advance()
+            rhs = self.math_term()
+            lhs = MathOperationNode(lhs, op, rhs)
+        return lhs
+
+    def math_term(self):
+        lhs = self.math_factor()
+
+        while self.token.type in (MUL_TOKEN, DIV_TOKEN):
+            op = self.token
+            self.advance()
+            rhs = self.math_factor()
+            lhs = MathOperationNode(lhs, op, rhs)
+        return lhs
+
+    def math_factor(self):
+        token = self.token
+        token_type = token.type
+        if token_type == INTERO_TOKEN:
+            self.advance()
+            return ConstNode(token)
+        elif token_type == DECIMALE_TOKEN:
+            self.advance()
+            return ConstNode(token)
+        elif token_type == ID_TOKEN:
+            self.advance()
+            return ConstNode(token)
+        elif token_type == LEFT_PAR_TOKEN:
+            self.advance()
+            math_expr = self.math_expr()
+            if self.token.type != RIGHT_PAR_TOKEN:
+                print(f'MANCA LA PAR DI CHIUSURA')
+                return ERROR
+            else:
+                self.advance()
+                return math_expr
+
+
 def run(text):
     lexer = Lexer(text)
-    return lexer.lex()
+    tokens = lexer.lex()
+    print(tokens)
+    parser = Parser(tokens)
+    return parser.parse()
