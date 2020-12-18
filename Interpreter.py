@@ -72,47 +72,37 @@ class Lexer:
         self.advance()
 
     def lex(self):
-        tokens = []
-        while self.char is not None:
-            if self.char in '\t ':
-                self.advance()
-            elif self.char == '\n':
-                self.newline()
-            elif self.char in SUGAR:
-                tokens.append(self.sugar())
-                self.advance()
-            elif self.char in OPERATORS:
-                res = self.operator()
-                if res is not None:
-                    tokens.append(res)
-                self.advance()
-            elif self.char in REL_OPERATORS:
-                rel_op = self.rel_operator()
-                if rel_op == -1:
-                    return ERROR
+        try:
+            tokens = []
+            while self.char is not None:
+                if self.char in '\t ':
+                    self.advance()
+                elif self.char == '\n':
+                    self.newline()
+                elif self.char in SUGAR:
+                    tokens.append(self.sugar())
+                    self.advance()
+                elif self.char in OPERATORS:
+                    res = self.operator()
+                    if res is not None:
+                        tokens.append(res)
+                    self.advance()
+                elif self.char in REL_OPERATORS:
+                    tokens.append(self.rel_operator())
+                    self.advance()
+                elif self.char in LETTERS:
+                    tokens.append(self.alpha_num())
+                elif self.char in DIGITS:
+                    tokens.append(self.num_const())
+                elif self.char == '"':
+                    tokens.append(self.str_const())
+                    self.advance()
                 else:
-                    tokens.append(rel_op)
-                self.advance()
-            elif self.char in LETTERS:
-                tokens.append(self.alpha_num())
-            elif self.char in DIGITS:
-                num_const = self.num_const()
-                if num_const == -1:
-                    return ERROR
-                else:
-                    tokens.append(num_const)
-            elif self.char == '"':
-                str_const = self.str_const()
-                if str_const == -1:
-                    return ERROR
-                else:
-                    tokens.append(str_const)
-                self.advance()
-            else:
-                self.error('unknown_char')
-                return ERROR
+                    self.error('unknown_char')
 
-        return tokens
+            return tokens
+        except Exception:
+            return ERROR
 
     def sugar(self):
         if self.char == ';':
@@ -173,9 +163,7 @@ class Lexer:
                 self.advance()
                 return Token(NEQ_TOKEN)
             else:
-                self.advance()
                 self.error('=_expected')
-                return -1
 
     def alpha_num(self):
         string = self.char
@@ -203,7 +191,6 @@ class Lexer:
             self.advance()
         if dot == 2:
             self.error('too_many_dots')
-            return -1
         elif dot == 1:
             return Token(DECIMALE_TOKEN, float(num))
         else:
@@ -218,7 +205,6 @@ class Lexer:
         # str_const = bytes(str_const, "utf-8").decode("unicode_escape")
         if self.char is None:
             self.error('"_expected')
-            return -1
         else:
             return Token(STRINGA_TOKEN, str_const)
 
@@ -228,7 +214,7 @@ class Lexer:
 
     def error(self, error_type):
         print(f'{RED_STRING}ERRORE DI SINTASSI:')
-        if error_type == '"_expected"':
+        if error_type == '"_expected':
             print(f'Riga {self.xy[1]}, colonna {self.xy[0]} --> Chiudere le virgolette \'"\'')
         elif error_type == 'unknown_char':
             print(f'Riga {self.xy[1]}, colonna {self.xy[0]} --> Carattere \'{self.char}\' non valido!')
@@ -236,6 +222,8 @@ class Lexer:
             print(f'Riga {self.xy[1]}, colonna {self.xy[0]} --> Aggiungere un \'=\'')
         elif error_type == 'too_many_dots':
             print(f'Riga {self.xy[1]}, colonna {self.xy[0]} --> Togliere un \'.\'')
+
+        raise Exception
 
 
 ##############################################################################################
@@ -275,7 +263,10 @@ class Parser:
             self.token = self.tokens_list[self.pos]
 
     def parse(self):
-        return self.math_expr()
+        try:
+            return self.math_expr()
+        except Exception:
+            return ERROR
 
     def math_expr(self):
         lhs = self.math_term()
@@ -314,7 +305,7 @@ class Parser:
             math_expr = self.math_expr()
             if self.token.type != RIGHT_PAR_TOKEN:
                 print(f'MANCA LA PAR DI CHIUSURA')
-                return ERROR
+                raise Exception
             else:
                 self.advance()
                 return math_expr
