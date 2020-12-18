@@ -8,3 +8,8 @@ nodi, diverso tipo, 'puntatori' per i figli (numero non standard)
     es. inc_dec_node ha 1 figlio (nodo)
 
 gestire errori
+
+    MEGLIO:
+    UN NODO PER OP BINARIE (PER NON AVERNE MILLE UGUALI)
+    IDEM PER UNARI (radice,+,-,++,--)
+    Const

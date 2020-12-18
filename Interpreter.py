@@ -23,6 +23,7 @@ ID_TOKEN = 'ID'
 INTERO_TOKEN = 'INT'
 DECIMALE_TOKEN = 'DECIM'
 STRINGA_TOKEN = 'STR'
+EOF_TOKEN = 'EOF'
 
 ERROR = 'ERROR'
 RED_STRING = '\033[91m'
@@ -100,6 +101,7 @@ class Lexer:
                 else:
                     self.error('unknown_char')
 
+            tokens.append(Token(EOF_TOKEN))
             return tokens
         except Exception:
             return ERROR
@@ -232,6 +234,14 @@ class Lexer:
 ##############################################################################################
 
 
+class StatNode:
+    def __init__(self, child, brother=None):
+        self.child = child
+        self.brother = brother
+
+    def __repr__(self):
+        return f'({self.child}), {self.brother}'
+
 class ConstNode:
     def __init__(self, token):
         self.token = token
@@ -240,7 +250,16 @@ class ConstNode:
         return f'{self.token}'
 
 
-class MathOperationNode:
+class UnaryOperationNode:
+    def __init__(self, operator, token):
+        self.operator = operator
+        self.token = token
+
+    def __repr__(self):
+        return f'({self.operator}, {self.token})'
+
+
+class BinaryOperationNode:
     def __init__(self, left_child, operator, right_child):
         self.left_child = left_child
         self.right_child = right_child
@@ -262,11 +281,58 @@ class Parser:
         if self.pos < len(self.tokens_list):
             self.token = self.tokens_list[self.pos]
 
+
     def parse(self):
         try:
-            return self.math_expr()
-        except Exception:
+            return self.stat_list()
+        except Exception as e:
+            print(e)
             return ERROR
+    #riprendere da qui!
+    def stat_list(self):
+        while self.token.type != EOF_TOKEN:
+                child = self.stat()
+                if self.token.type == SEMICOLON_TOKEN:
+                    self.advance()
+                else:
+                    self.error(';_expected')
+                if self.token.type == EOF_TOKEN:
+                    return StatNode(child)
+                else:
+                    return StatNode(child)
+
+
+    def stat(self):
+        return self.assign_stat()
+
+    def assign_stat(self):
+        if self.token.type == ID_TOKEN:
+            id = self.token
+            self.advance()
+            if self.token.type == ASSIGN_TOKEN:
+                op = self.token.type
+                self.advance()
+                rhs = self.rhs_assign_stat()
+                if rhs is not None:
+                    return BinaryOperationNode(id, op, rhs)
+                else:
+                    self.error('expr_expected')
+            else:
+                self.error('=_expected')
+        else:
+            self.error('id_expected')
+
+    def rhs_assign_stat(self):
+        if self.token.type in ('VERO', 'FALSO'):
+            return self.bool_const()
+        else:
+            return self.math_expr()
+
+    def bool_const(self):
+        if self.token.type == 'VERO':
+            return ConstNode(self.token)
+        else:
+            return ConstNode(self.token)
 
     def math_expr(self):
         lhs = self.math_term()
@@ -275,7 +341,7 @@ class Parser:
             op = self.token
             self.advance()
             rhs = self.math_term()
-            lhs = MathOperationNode(lhs, op, rhs)
+            lhs = BinaryOperationNode(lhs, op, rhs)
         return lhs
 
     def math_term(self):
@@ -285,7 +351,7 @@ class Parser:
             op = self.token
             self.advance()
             rhs = self.math_factor()
-            lhs = MathOperationNode(lhs, op, rhs)
+            lhs = BinaryOperationNode(lhs, op, rhs)
         return lhs
 
     def math_factor(self):
@@ -300,20 +366,55 @@ class Parser:
         elif token_type == ID_TOKEN:
             self.advance()
             return ConstNode(token)
+        elif token_type in (PLUS_TOKEN, MIN_TOKEN):
+            self.advance()
+            return UnaryOperationNode(token, self.math_factor())
         elif token_type == LEFT_PAR_TOKEN:
             self.advance()
             math_expr = self.math_expr()
             if self.token.type != RIGHT_PAR_TOKEN:
-                print(f'MANCA LA PAR DI CHIUSURA')
-                raise Exception
+                self.error(')_expected')
             else:
                 self.advance()
                 return math_expr
+        elif token_type == 'RADICE':
+            return self.radice_stat()
 
+    def radice_stat(self):
+        sqrt = self.token.type
+        self.advance()
+        if self.token.type == LEFT_PAR_TOKEN:
+            self.advance()
+            expr = self.math_expr()
+            if self.token.type == RIGHT_PAR_TOKEN:
+                self.advance()
+                return UnaryOperationNode(sqrt, expr)
+            else:
+                self.error(')_expected')
+        else:
+            self.error('(_expected')
+
+    def error(self, error_type):
+        print(f'{RED_STRING}ERRORE DI SINTASSI:')
+        if error_type == ')_expected':
+            print(f' --> Chiudere la parentesi \')\'')
+        elif error_type == '(_expected':
+            print(f' --> Aprire la parentesi \'(\'')
+        elif error_type == ';_expected':
+            print(f' --> \';\' mancante')
+        elif error_type == 'id_expected':
+            print(f' --> Inserire un nome di variabile')
+        elif error_type == '=_expected':
+            print(f' --> \'=\' mancante')
+        elif error_type == 'expr_expected':
+            print(f' --> Inserire o un numero o un valore booleano o un espressione matematica')
+        raise Exception
 
 def run(text):
     lexer = Lexer(text)
     tokens = lexer.lex()
     print(tokens)
     parser = Parser(tokens)
-    return parser.parse()
+    tree = parser.parse()
+    #print(tree)
+    return tree
