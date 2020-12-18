@@ -13,3 +13,5 @@ gestire errori
     UN NODO PER OP BINARIE (PER NON AVERNE MILLE UGUALI)
     IDEM PER UNARI (radice,+,-,++,--)
     Const
+
+METODO DI MATCHING!!

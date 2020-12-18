@@ -27,6 +27,7 @@ EOF_TOKEN = 'EOF'
 
 ERROR = 'ERROR'
 RED_STRING = '\033[91m'
+YELLOW_STRING = '\033[93m'
 
 SUGAR = '.,;:()'
 OPERATORS = '*/-+'
@@ -232,7 +233,16 @@ class Lexer:
 ##############################################################################################
 ##############################################################################################
 ##############################################################################################
+class RootNode:
+    def __init__(self, right_child, left_child=None):
+        self.left_child = left_child
+        self.right_child = right_child
 
+    def __repr__(self):
+        if self.left_child is not None:
+            return f'{self.left_child}, {self.right_child}'
+        else:
+            return f'{self.right_child}'
 
 class StatNode:
     def __init__(self, child, brother=None):
@@ -240,7 +250,10 @@ class StatNode:
         self.brother = brother
 
     def __repr__(self):
-        return f'({self.child}), {self.brother}'
+        if self.brother is not None:
+            return f'({self.child}, {self.brother})'
+        else:
+            return f'{self.child}'
 
 class ConstNode:
     def __init__(self, token):
@@ -284,26 +297,58 @@ class Parser:
 
     def parse(self):
         try:
-            return self.stat_list()
+            return self.program()
         except Exception as e:
             print(e)
             return ERROR
-    #riprendere da qui!
-    def stat_list(self):
-        while self.token.type != EOF_TOKEN:
-                child = self.stat()
-                if self.token.type == SEMICOLON_TOKEN:
-                    self.advance()
-                else:
-                    self.error(';_expected')
-                if self.token.type == EOF_TOKEN:
-                    return StatNode(child)
-                else:
-                    return StatNode(child)
 
+    def program(self):
+        #if self.toke.type in ('INTERO', 'DECIMALE', 'STRINGA', 'BOOLEAN'):
+        #    self.advance()
+        #    decl_list = self.decl_list()
+        if self.token.type == 'INIZIO':
+            self.advance()
+            body = self.body()
+        else:
+            self.error('no_body')
+
+        return RootNode(body)
+
+
+    def body(self):
+        stat_list = self.stat_list()
+        if self.token.type == 'FINE':
+            self.advance()
+            if self.token.type == DOT_TOKEN:
+                self.advance()
+            else:
+                self.error('._expected')
+        else:
+            self.error('fine_expected')
+        return stat_list
+
+    def stat_list(self):
+        if self.token.type == 'FINE':
+            self.warning('empty_body')
+        else:
+            stat_list_entered = False
+            child = self.stat()
+            while self.token.type != 'FINE' and self.token.type != EOF_TOKEN:
+                stat_list_entered = True
+                brother = self.stat()
+                child = StatNode(child, brother)
+            if stat_list_entered:
+                return child
+            else:
+                return StatNode(child)
 
     def stat(self):
-        return self.assign_stat()
+        stat = self.assign_stat()
+        if self.token.type == SEMICOLON_TOKEN:
+            self.advance()
+            return stat
+        else:
+            self.error(';_expected')
 
     def assign_stat(self):
         if self.token.type == ID_TOKEN:
@@ -408,6 +453,18 @@ class Parser:
             print(f' --> \'=\' mancante')
         elif error_type == 'expr_expected':
             print(f' --> Inserire o un numero o un valore booleano o un espressione matematica')
+        elif error_type == 'no_body':
+            print(f' --> Manca il corpo del programma \'INIZIO...FINE\'')
+        elif error_type == 'fine_expected':
+            print(f' --> \'fine\' mancante')
+        elif error_type == '._expected':
+            print(f' --> \'.\' mancante')
+        raise Exception
+
+    def warning(self, warning_type):
+        print(f'{YELLOW_STRING}ATTENZIONE:')
+        if warning_type == 'empty_body':
+            print(' --> Corpo del programma vuoto, il programma non farà nulla!')
         raise Exception
 
 def run(text):
