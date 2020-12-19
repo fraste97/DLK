@@ -1,6 +1,5 @@
 inizio
-a = 1+1;
-b = 2+1*3;
-c = 2;
-d = a;
+a=falso;
+a--;
+a=1+2+3;
 fine.
