@@ -36,7 +36,7 @@ LETTERS = string.ascii_letters
 DIGITS = '0123456789'
 ALPHANUM = LETTERS + DIGITS
 KEYWORDS = ['INTERO', 'DECIMALE', 'STRINGA', 'BOOLEAN', 'INIZIO', 'FINE', 'STOP', 'RADICE',
-            'SE', 'VERO', 'FAI', 'FALSO', 'RIPETI', 'VOLTE', 'SCRIVI', 'INSERISCI', 'E', 'O']
+            'SE', 'VERO', 'FAI', 'FALSO', 'RIPETI', 'VOLTE', 'SCRIVI', 'INSERISCI', 'E', 'O', 'ALTRIMENTI']
 
 
 class Token:
@@ -284,6 +284,19 @@ class BinaryOperationNode:
         return f'({self.left_child}, {self.operator}, {self.right_child})'
 
 
+class SeNode:
+    def __init__(self, logical_expr, stat_node, altrimenti_stat_node=None):
+        self.logical_expr = logical_expr
+        self.stat_node = stat_node
+        self.altrimenti_stat_node = altrimenti_stat_node
+
+    def __repr__(self):
+        if self.altrimenti_stat_node is not None:
+            return f'({self.logical_expr}, {self.stat_node}, {self.altrimenti_stat_node})'
+        else:
+            return f'({self.logical_expr}, {self.stat_node})'
+
+
 class Parser:
     def __init__(self, tokens_list):
         self.tokens_list = tokens_list
@@ -336,7 +349,8 @@ class Parser:
         else:
             stat_list_entered = False
             child = self.stat()
-            while self.token.type != 'FINE' and self.token.type != EOF_TOKEN:
+
+            while self.token.type != 'FINE' and self.token.type != EOF_TOKEN and self.token.type != 'ALTRIMENTI':
                 stat_list_entered = True
                 brother = self.stat()
                 child = StatNode(child, brother)
@@ -351,6 +365,8 @@ class Parser:
                 stat = self.assign_stat()
             else:
                 stat = self.inc_dec_stat()
+        elif self.match('SE'):
+            stat = self.se_stat()
 
         if self.match(SEMICOLON_TOKEN):
             return stat
@@ -442,13 +458,54 @@ class Parser:
         else:
             self.error('(_expected')
 
+    def se_stat(self):
+        if self.match(LEFT_PAR_TOKEN):
+            logical_expr = self.math_expr()
+
+            if self.match(RIGHT_PAR_TOKEN):
+                if self.match('VERO'):
+                    if self.match('FAI'):
+                        if self.match(COLON_TOKEN):
+                            if self.token.type != 'FINE':
+                                stat_list = self.stat_list()
+                                if self.match('ALTRIMENTI'):
+                                    altrimenti_stat = self.altrimenti_stat()
+                                    if self.match('FINE'):
+                                        return SeNode(logical_expr, stat_list, altrimenti_stat)
+                                    else:
+                                        self.error('fine_expected')
+                                elif self.match('FINE'):
+                                    return SeNode(logical_expr, stat_list)
+                                else:
+                                    self.error('fine_expected')
+                            else:
+                                self.warning('se_empty_body')
+                        else:
+                            self.error(':_expected')
+                    else:
+                        self.error('fai_expected')
+                else:
+                    self.error('vero_expected')
+            else:
+                self.error(')_expected')
+        else:
+            self.error('(_expected')
+
+    def altrimenti_stat(self):
+        if self.match(COLON_TOKEN):
+            return self.stat_list()
+        else:
+            self.error(':_expected')
+
+    #def logical_expr(self):
+
+
     def inc_dec_stat(self):
         id = self.token
         self.advance()
         op = self.token
         self.advance()
         return UnaryOperationNode(op, id)
-
 
     def error(self, error_type):
         print(f'{RED_STRING}ERRORE DI SINTASSI:')
@@ -472,12 +529,22 @@ class Parser:
             print(f' --> \'.\' mancante')
         elif error_type == 'factor_expected':
             print(f' --> Inserire o un numero o una variabile')
+        elif error_type == ':_expected':
+            print(f' --> \':\' mancante')
+        elif error_type == 'fai_expected':
+            print(f' --> \'fai\' mancante')
+        elif error_type == 'vero_expected':
+            print(f' --> \'vero\' mancante')
+        elif error_type == 'falso_expected':
+            print(f' --> \'falso\' mancante')
         raise Exception
 
     def warning(self, warning_type):
         print(f'{YELLOW_STRING}ATTENZIONE:')
         if warning_type == 'empty_body':
-            print(' --> Corpo del programma vuoto, il programma non farà nulla!')
+            print(' --> Corpo vuoto, non farà nulla!')
+        elif warning_type == 'se_empty_body':
+            print(' --> Corpo del costrutto \'se\' vuoto, non farà nulla!')
         raise Exception
 
 def run(text):

@@ -1,5 +1,11 @@
 inizio
-a=falso;
-a--;
-a=1+2+3;
+se(1+1)vero fai:
+    a=1;
+    a=1;
+altrimenti:
+    a=a+b;
+    se(1+1)vero fai:
+        a++;
+     fine;
+fine;
 fine.
