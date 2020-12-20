@@ -274,6 +274,36 @@ class UnaryOperationNode:
         return f'({self.operator}, {self.token})'
 
 
+class AssignNode:
+    def __init__(self, left_child, operator, right_child):
+        self.left_child = left_child
+        self.right_child = right_child
+        self.operator = operator
+
+    def __repr__(self):
+        return f'({self.left_child}, {self.operator}, {self.right_child})'
+
+
+class RelExprNode:
+    def __init__(self, left_child, operator, right_child):
+        self.left_child = left_child
+        self.right_child = right_child
+        self.operator = operator
+
+    def __repr__(self):
+        return f'({self.left_child}, {self.operator}, {self.right_child})'
+
+
+class LogicalExprNode:
+    def __init__(self, left_child, operator, right_child):
+        self.left_child = left_child
+        self.right_child = right_child
+        self.operator = operator
+
+    def __repr__(self):
+        return f'({self.left_child}, {self.operator}, {self.right_child})'
+
+
 class BinaryOperationNode:
     def __init__(self, left_child, operator, right_child):
         self.left_child = left_child
@@ -292,9 +322,34 @@ class SeNode:
 
     def __repr__(self):
         if self.altrimenti_stat_node is not None:
-            return f'({self.logical_expr}, {self.stat_node}, {self.altrimenti_stat_node})'
+            return f'(se{self.logical_expr}, {self.stat_node}, altrimenti{self.altrimenti_stat_node})'
         else:
-            return f'({self.logical_expr}, {self.stat_node})'
+            return f'(se{self.logical_expr}, {self.stat_node})'
+
+
+class RipetiNode:
+    def __init__(self, num_token, child):
+        self.child = child
+        self.num_token = num_token
+
+    def __repr__(self):
+        return f'(ripeti{self.child})'
+
+
+class ScriviNode:
+    def __init__(self, arg_token):
+        self.arg_token = arg_token
+
+    def __repr__(self):
+        return f'(scrivi({self.arg_token}))'
+
+
+class InserisciNode:
+    def __init__(self, arg_token):
+        self.arg_token = arg_token
+
+    def __repr__(self):
+        return f'(inserisci({self.arg_token}))'
 
 
 class Parser:
@@ -367,6 +422,12 @@ class Parser:
                 stat = self.inc_dec_stat()
         elif self.match('SE'):
             stat = self.se_stat()
+        elif self.match('RIPETI'):
+            stat = self.ripeti_stat()
+        elif self.match('SCRIVI'):
+            stat = self.scrivi_stat()
+        elif self.match('INSERISCI'):
+            stat = self.inserisci_stat()
 
         if self.match(SEMICOLON_TOKEN):
             return stat
@@ -382,7 +443,7 @@ class Parser:
                 self.advance()
                 rhs = self.rhs_assign_stat()
                 if rhs is not None:
-                    return BinaryOperationNode(id, op, rhs)
+                    return AssignNode(id, op, rhs)
                 else:
                     self.error('expr_expected')
             else:
@@ -460,7 +521,7 @@ class Parser:
 
     def se_stat(self):
         if self.match(LEFT_PAR_TOKEN):
-            logical_expr = self.math_expr()
+            logical_expr = self.logical_expr()
 
             if self.match(RIGHT_PAR_TOKEN):
                 if self.match('VERO'):
@@ -497,8 +558,90 @@ class Parser:
         else:
             self.error(':_expected')
 
-    #def logical_expr(self):
+    def logical_expr(self):
+        lhs = self.rel_expr()
 
+        while self.token.type in ('E', 'O'):
+            op = self.token
+            self.advance()
+            rhs = self.rel_expr()
+            lhs = LogicalExprNode(lhs, op, rhs)
+        return lhs
+
+    def rel_expr(self):
+        lhs = self.rel_term()
+
+        while self.token.type in (GT_TOKEN, GTE_TOKEN, EQ_TOKEN, LT_TOKEN, LTE_TOKEN, NEQ_TOKEN):
+            op = self.token
+            self.advance()
+            rhs = self.rel_expr()
+            lhs = RelExprNode(lhs, op, rhs)
+        return lhs
+
+    def rel_term(self):
+        token = self.token
+        if token.type in (INTERO_TOKEN, DECIMALE_TOKEN, ID_TOKEN):
+            self.advance()
+            return ConstNode(token)
+        elif self.match(RIGHT_PAR_TOKEN):
+            expr = self.logical_expr()
+            self.advance()
+            return expr
+        else:
+            self.error('term_expected')
+
+    def ripeti_stat(self):
+        if self.token.type == INTERO_TOKEN:
+            num = self.token
+            self.advance()
+            if self.match('VOLTE'):
+                if self.match(COLON_TOKEN):
+                    if self.token.type != 'FINE':
+                        stat = self.stat_list()
+                        if self.match('FINE'):
+                            return RipetiNode(num, stat)
+                        else:
+                            self.error('fine_expected')
+                    else:
+                        self.warning('ripeti_empty_body')
+                else:
+                    self.error(':_expected')
+            else:
+                self.error('volte_expected')
+        else:
+            self.error('int_expected')
+
+    def scrivi_stat(self):
+        if self.match(LEFT_PAR_TOKEN):
+            arg = self.scrivi_arg()
+            if self.match(RIGHT_PAR_TOKEN):
+                return ScriviNode(arg)
+            else:
+                self.error(')_expected')
+        else:
+            self.error('(_expected')
+
+    def scrivi_arg(self):
+        token = self.token
+        if token.type in (ID_TOKEN, INTERO_TOKEN, DECIMALE_TOKEN, STRINGA_TOKEN):
+            self.advance()
+            return ConstNode(token)
+        else:
+            self.error('arg_expected')
+
+    def inserisci_stat(self):
+        if self.match(LEFT_PAR_TOKEN):
+            if self.token.type == ID_TOKEN:
+                arg=self.token
+                self.advance()
+                if self.match(RIGHT_PAR_TOKEN):
+                    return InserisciNode(arg)
+                else:
+                    self.error(')_expected')
+            else:
+                self.error('id_expected')
+        else:
+            self.error('(_expected')
 
     def inc_dec_stat(self):
         id = self.token
@@ -520,7 +663,7 @@ class Parser:
         elif error_type == '=_expected':
             print(f' --> \'=\' mancante')
         elif error_type == 'expr_expected':
-            print(f' --> Inserire o un numero o un valore booleano o un espressione matematica')
+            print(f' --> Inserire o un numero o un valore booleano o una variabile o un espressione matematica')
         elif error_type == 'no_body':
             print(f' --> Manca il corpo del programma \'INIZIO...FINE\'')
         elif error_type == 'fine_expected':
@@ -537,6 +680,14 @@ class Parser:
             print(f' --> \'vero\' mancante')
         elif error_type == 'falso_expected':
             print(f' --> \'falso\' mancante')
+        elif error_type == 'term_expected':
+            print(f' --> Inserire o un numero o una variabile o un espressione booleana')
+        elif error_type == 'volte_expected':
+            print(f' --> \'volte\' mancante')
+        elif error_type == 'int_expected':
+            print(f' --> Numero intero mancante')
+        elif error_type == 'arg_expected':
+            print(f' --> Inserire una stringa o un numero o una variabile')
         raise Exception
 
     def warning(self, warning_type):
@@ -545,6 +696,8 @@ class Parser:
             print(' --> Corpo vuoto, non farà nulla!')
         elif warning_type == 'se_empty_body':
             print(' --> Corpo del costrutto \'se\' vuoto, non farà nulla!')
+        elif warning_type == 'ripeti_empty_body':
+            print(' --> Corpo del costrutto \'ripeti\' vuoto, non farà nulla!')
         raise Exception
 
 def run(text):
