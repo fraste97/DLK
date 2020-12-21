@@ -1,7 +1,9 @@
-
+intero:a,b,c,d;
+decimale: a;
 inizio
     i=1;
     pi=3.14;
+    a = radice(2+7/(-1+1));
     richiesta="Inserire il raggio del cerchio numero";
     ripeti 10 volte:
         scrivi(richiesta);

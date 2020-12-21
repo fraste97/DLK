@@ -252,7 +252,7 @@ class RootNode:
 
     def __repr__(self):
         if self.left_child is not None:
-            return f'{self.left_child}, {self.right_child}'
+            return f'<{self.left_child}, {self.right_child}>'
         else:
             return f'{self.right_child}'
 
@@ -267,6 +267,39 @@ class StatNode:
             return f'({self.child}, {self.brother})'
         else:
             return f'{self.child}'
+
+
+class IdNode:
+    def __init__(self, child, brother=None):
+        self.child = child
+        self.brother = brother
+
+    def __repr__(self):
+        if self.brother is not None:
+            return f'({self.child}, {self.brother})'
+        else:
+            return f'({self.child})'
+
+
+class DeclListNode:
+    def __init__(self, child, brother=None):
+        self.child = child
+        self.brother = brother
+
+    def __repr__(self):
+        if self.brother is not None:
+            return f'({self.child},{self.brother})'
+        else:
+            return f'({self.child})'
+
+
+class DeclNode:
+    def __init__(self, type, child):
+        self.child = child
+        self.type = type
+
+    def __repr__(self):
+            return f'{self.type}{self.child}'
 
 
 class ConstNode:
@@ -390,15 +423,47 @@ class Parser:
             return ERROR
 
     def program(self):
-        # if self.toke.type in ('INTERO', 'DECIMALE', 'STRINGA', 'BOOLEAN'):
-        #    self.advance()
-        #    decl_list = self.decl_list()
+        decl_list = None
+        if self.token.type in ('INTERO', 'DECIMALE', 'STRINGA', 'BOOLEAN'):
+            decl_list = self.decl_list()
         if self.match('INIZIO'):
             body = self.body()
         else:
             self.error('inizio')
+        if decl_list is not None:
+            return RootNode(body, decl_list)
+        else:
+            return RootNode(body)
 
-        return RootNode(body)
+    def decl_list(self):
+        child = self.decl()
+        while self.token.type in ('INTERO', 'DECIMALE', 'STRINGA', 'BOOLEAN'):
+            brother = self.decl()
+            child = DeclListNode(child, brother)
+        return child
+
+    def decl(self):
+        type = self.token
+        self.advance()
+        if self.match(COLON_TOKEN):
+            id_list = self.id_list()
+            if self.match(SEMICOLON_TOKEN):
+                return DeclNode(type, id_list)
+            else:
+                self.error(';')
+        else:
+            self.error(':')
+
+    def id_list(self):
+        if self.token.type == ID_TOKEN:
+            child = IdNode(self.token)
+            self.advance()
+            while self.token.type == COMMA_TOKEN:
+                self.advance()
+                brother = self.id_list()
+                child = IdNode(child, brother)
+        return child
+
 
     def body(self):
         stat_list = self.stat_list()
