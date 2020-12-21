@@ -47,9 +47,11 @@ class Token:
 
     def __repr__(self):
         if self.value is None:
-            return f'{self.type},{self.xy}'
+            # return f'{self.type},{self.xy}'
+            return f'{self.type}'
         else:
-            return f'{self.type}::{self.value},{self.xy}'
+            # return f'{self.type}::{self.value},{self.xy}'
+            return f'{self.type}::{self.value}'
 
 
 class Lexer:
@@ -441,7 +443,11 @@ class Parser:
             stat = self.scrivi_stat()
         elif self.match('INSERISCI'):
             stat = self.inserisci_stat()
-
+        elif self.token.type == 'STOP':
+            stat = self.token
+            self.advance()
+        else:
+            self.error('unexpected_token')
         if self.match(SEMICOLON_TOKEN):
             return stat
         else:
@@ -687,6 +693,8 @@ class Parser:
             print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> \'{error_type}\' mancante')
         elif error_type == '++_--_expected':
             print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire o \'++\' o \'--\'')
+        elif error_type == 'unexpected_token':
+            print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> \'{self.token.type}\' non valido')
         raise Exception
 
     def warning(self, warning_type):
@@ -707,5 +715,5 @@ def run(text):
     print(tokens)
     parser = Parser(tokens)
     tree = parser.parse()
-    # print(tree)
+
     return tree
