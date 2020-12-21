@@ -7,12 +7,4 @@ nodi, diverso tipo, 'puntatori' per i figli (numero non standard)
     es. operazione_matematica_node ha 2 figli (nodi) e un operatore
     es. inc_dec_node ha 1 figlio (nodo)
 
-gestire errori
 
-    MEGLIO:
-    UN NODO PER OP BINARIE (PER NON AVERNE MILLE UGUALI)
-    IDEM PER UNARI (radice,+,-,++,--)
-    Const
-
-SERVE POS IN TOKENS PER AVERE RIFERIMENTO RIGA COLONNA ERRORI SINTASSI
-SERVE ERRORE STAT NON RICONOSCIUTO

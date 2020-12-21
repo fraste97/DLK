@@ -40,15 +40,16 @@ KEYWORDS = ['INTERO', 'DECIMALE', 'STRINGA', 'BOOLEAN', 'INIZIO', 'FINE', 'STOP'
 
 
 class Token:
-    def __init__(self, type, value=None):
+    def __init__(self, type, xy, value=None):
         self.value = value
         self.type = type
+        self.xy = xy
 
     def __repr__(self):
         if self.value is None:
-            return f'{self.type}'
+            return f'{self.type},{self.xy}'
         else:
-            return f'{self.type}::{self.value}'
+            return f'{self.type}::{self.value},{self.xy}'
 
 
 class Lexer:
@@ -58,6 +59,9 @@ class Lexer:
         self.pos = -1
         self.xy = [0, 1]
         self.advance()
+
+    def get_xy(self):
+        return [self.xy[0], self.xy[1]]
 
     def advance(self):
         self.pos += 1
@@ -102,86 +106,91 @@ class Lexer:
                 else:
                     self.error('unknown_char')
 
-            tokens.append(Token(EOF_TOKEN))
+            tokens.append(Token(EOF_TOKEN, self.get_xy()))
             return tokens
-        except Exception:
+        except Exception as e:
+            #traceback.print_exc()
             return ERROR
 
     def sugar(self):
         if self.char == ';':
-            return Token(SEMICOLON_TOKEN)
+            return Token(SEMICOLON_TOKEN, self.get_xy())
         elif self.char == ':':
-            return Token(COLON_TOKEN)
+            return Token(COLON_TOKEN, self.get_xy())
         elif self.char == '.':
-            return Token(DOT_TOKEN)
+            return Token(DOT_TOKEN, self.get_xy())
         elif self.char == '(':
-            return Token(LEFT_PAR_TOKEN)
+            return Token(LEFT_PAR_TOKEN, self.get_xy())
         elif self.char == ')':
-            return Token(RIGHT_PAR_TOKEN)
+            return Token(RIGHT_PAR_TOKEN, self.get_xy())
         elif self.char == ',':
-            return Token(COMMA_TOKEN)
+            return Token(COMMA_TOKEN, self.get_xy())
 
     def operator(self):
+        start = self.get_xy()
         if self.char == '+':
             if self.pos + 1 < len(self.text) and self.text[self.pos + 1] == '+':
                 self.advance()
-                return Token(INC_TOKEN)
+                return Token(INC_TOKEN, start)
             else:
-                return Token(PLUS_TOKEN)
+                return Token(PLUS_TOKEN, start)
         elif self.char == '-':
             if self.pos + 1 < len(self.text) and self.text[self.pos + 1] == '-':
                 self.advance()
-                return Token(DEC_TOKEN)
+                return Token(DEC_TOKEN, start)
             else:
-                return Token(MIN_TOKEN)
+                return Token(MIN_TOKEN, start)
         elif self.char == '/':
             if self.pos + 1 < len(self.text) and self.text[self.pos + 1] == '/':
                 self.comment()
             else:
-                return Token(DIV_TOKEN)
+                return Token(DIV_TOKEN, start)
         elif self.char == '*':
-            return Token(MUL_TOKEN)
+            return Token(MUL_TOKEN, start)
 
     def rel_operator(self):
+        start = self.get_xy()
         if self.char == '<':
             if self.pos + 1 < len(self.text) and self.text[self.pos + 1] == '=':
                 self.advance()
-                return Token(LTE_TOKEN)
+                return Token(LTE_TOKEN, start)
             else:
-                return Token(LT_TOKEN)
+                return Token(LT_TOKEN, start)
         elif self.char == '>':
             if self.pos + 1 < len(self.text) and self.text[self.pos + 1] == '=':
                 self.advance()
-                return Token(GTE_TOKEN)
+                return Token(GTE_TOKEN, start)
             else:
-                return Token(GT_TOKEN)
+                return Token(GT_TOKEN, start)
         elif self.char == '=':
             if self.pos + 1 < len(self.text) and self.text[self.pos + 1] == '=':
                 self.advance()
-                return Token(EQ_TOKEN)
+                return Token(EQ_TOKEN, start)
             else:
-                return Token(ASSIGN_TOKEN)
+                return Token(ASSIGN_TOKEN, start)
         elif self.char == '!':
             if self.pos + 1 < len(self.text) and self.text[self.pos + 1] == '=':
                 self.advance()
-                return Token(NEQ_TOKEN)
+                return Token(NEQ_TOKEN, start)
             else:
                 self.error('=_expected')
 
     def alpha_num(self):
         string = self.char
+        start = self.get_xy()
         self.advance()
         while self.char is not None and self.char in ALPHANUM:
             string += self.char
             self.advance()
         if string.upper() in KEYWORDS:
-            return Token(string.upper())
+            return Token(string.upper(), start)
         else:
-            return Token(ID_TOKEN, string)
+            return Token(ID_TOKEN, start, string)
 
     def num_const(self):
         num = ''
         dot = 0
+        start = self.get_xy()
         while self.char is not None and (self.char in DIGITS or self.char == '.'):
             if dot == 1 and self.char == '.':
                 dot += 1
@@ -195,12 +204,13 @@ class Lexer:
         if dot == 2:
             self.error('too_many_dots')
         elif dot == 1:
-            return Token(DECIMALE_TOKEN, float(num))
+            return Token(DECIMALE_TOKEN, start, float(num))
         else:
-            return Token(INTERO_TOKEN, int(num))
+            return Token(INTERO_TOKEN, start, int(num))
 
     def str_const(self):
         str_const = ''
+        start = self.get_xy()
         self.advance()
         while self.char is not None and self.char != '"':
             str_const += self.char
@@ -209,7 +219,7 @@ class Lexer:
         if self.char is None:
             self.error('"_expected')
         else:
-            return Token(STRINGA_TOKEN, str_const)
+            return Token(STRINGA_TOKEN, start, str_const)
 
     def comment(self):
         while self.char is not None and self.char != '\n':
@@ -374,18 +384,17 @@ class Parser:
     def parse(self):
         try:
             return self.program()
-        except Exception as e:
-            print(e)
+        except Exception:
             return ERROR
 
     def program(self):
-        #if self.toke.type in ('INTERO', 'DECIMALE', 'STRINGA', 'BOOLEAN'):
+        # if self.toke.type in ('INTERO', 'DECIMALE', 'STRINGA', 'BOOLEAN'):
         #    self.advance()
         #    decl_list = self.decl_list()
         if self.match('INIZIO'):
             body = self.body()
         else:
-            self.error('no_body')
+            self.error('inizio')
 
         return RootNode(body)
 
@@ -393,9 +402,9 @@ class Parser:
         stat_list = self.stat_list()
         if self.match('FINE'):
             if not self.match(DOT_TOKEN):
-                self.error('._expected')
+                self.error('.')
         else:
-            self.error('fine_expected')
+            self.error('fine')
         return stat_list
 
     def stat_list(self):
@@ -416,10 +425,14 @@ class Parser:
 
     def stat(self):
         if self.token.type == ID_TOKEN:
-            if self.tokens_list[self.pos+1].type == ASSIGN_TOKEN:
+            if self.tokens_list[self.pos + 1].type == ASSIGN_TOKEN:
                 stat = self.assign_stat()
-            else:
+            elif self.tokens_list[self.pos + 1].type in (DEC_TOKEN, INC_TOKEN):
                 stat = self.inc_dec_stat()
+            elif self.tokens_list[self.pos + 1].type in (ID_TOKEN, DEC_TOKEN, 'VERO', 'FALSO', INTERO_TOKEN, STRINGA_TOKEN):
+                self.error('=')
+            else:
+                self.error('++_--_expected')
         elif self.match('SE'):
             stat = self.se_stat()
         elif self.match('RIPETI'):
@@ -432,7 +445,7 @@ class Parser:
         if self.match(SEMICOLON_TOKEN):
             return stat
         else:
-            self.error(';_expected')
+            self.error(';')
 
     def assign_stat(self):
         if self.token.type == ID_TOKEN:
@@ -447,7 +460,7 @@ class Parser:
                 else:
                     self.error('expr_expected')
             else:
-                self.error('=_expected')
+                self.error('=')
         else:
             self.error('id_expected')
 
@@ -534,19 +547,19 @@ class Parser:
                                     if self.match('FINE'):
                                         return SeNode(logical_expr, stat_list, altrimenti_stat)
                                     else:
-                                        self.error('fine_expected')
+                                        self.error('fine')
                                 elif self.match('FINE'):
                                     return SeNode(logical_expr, stat_list)
                                 else:
-                                    self.error('fine_expected')
+                                    self.error('fine')
                             else:
                                 self.warning('se_empty_body')
                         else:
-                            self.error(':_expected')
+                            self.error(':')
                     else:
-                        self.error('fai_expected')
+                        self.error('fai')
                 else:
-                    self.error('vero_expected')
+                    self.error('vero')
             else:
                 self.error(')_expected')
         else:
@@ -556,7 +569,7 @@ class Parser:
         if self.match(COLON_TOKEN):
             return self.stat_list()
         else:
-            self.error(':_expected')
+            self.error(':')
 
     def logical_expr(self):
         lhs = self.rel_expr()
@@ -601,13 +614,13 @@ class Parser:
                         if self.match('FINE'):
                             return RipetiNode(num, stat)
                         else:
-                            self.error('fine_expected')
+                            self.error('fine')
                     else:
                         self.warning('ripeti_empty_body')
                 else:
-                    self.error(':_expected')
+                    self.error(':')
             else:
-                self.error('volte_expected')
+                self.error('volte')
         else:
             self.error('int_expected')
 
@@ -632,7 +645,7 @@ class Parser:
     def inserisci_stat(self):
         if self.match(LEFT_PAR_TOKEN):
             if self.token.type == ID_TOKEN:
-                arg=self.token
+                arg = self.token
                 self.advance()
                 if self.match(RIGHT_PAR_TOKEN):
                     return InserisciNode(arg)
@@ -653,58 +666,46 @@ class Parser:
     def error(self, error_type):
         print(f'{RED_STRING}ERRORE DI SINTASSI:')
         if error_type == ')_expected':
-            print(f' --> Chiudere la parentesi \')\'')
+            print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Chiudere la parentesi \')\'')
         elif error_type == '(_expected':
-            print(f' --> Aprire la parentesi \'(\'')
-        elif error_type == ';_expected':
-            print(f' --> \';\' mancante')
+            print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Aprire la parentesi \'(\'')
         elif error_type == 'id_expected':
-            print(f' --> Inserire un nome di variabile')
-        elif error_type == '=_expected':
-            print(f' --> \'=\' mancante')
+            print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire un nome di variabile')
         elif error_type == 'expr_expected':
-            print(f' --> Inserire o un numero o un valore booleano o una variabile o un espressione matematica')
+            print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire o un numero o un valore booleano o una variabile o un espressione matematica')
         elif error_type == 'no_body':
-            print(f' --> Manca il corpo del programma \'INIZIO...FINE\'')
-        elif error_type == 'fine_expected':
-            print(f' --> \'fine\' mancante')
-        elif error_type == '._expected':
-            print(f' --> \'.\' mancante')
+            print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Manca il corpo del programma \'INIZIO...FINE\'')
         elif error_type == 'factor_expected':
-            print(f' --> Inserire o un numero o una variabile')
-        elif error_type == ':_expected':
-            print(f' --> \':\' mancante')
-        elif error_type == 'fai_expected':
-            print(f' --> \'fai\' mancante')
-        elif error_type == 'vero_expected':
-            print(f' --> \'vero\' mancante')
-        elif error_type == 'falso_expected':
-            print(f' --> \'falso\' mancante')
+            print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire o un numero o una variabile')
         elif error_type == 'term_expected':
-            print(f' --> Inserire o un numero o una variabile o un espressione booleana')
-        elif error_type == 'volte_expected':
-            print(f' --> \'volte\' mancante')
+            print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire o un numero o una variabile o un espressione booleana')
         elif error_type == 'int_expected':
-            print(f' --> Numero intero mancante')
+            print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Numero intero mancante')
         elif error_type == 'arg_expected':
-            print(f' --> Inserire una stringa o un numero o una variabile')
+            print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire una stringa o un numero o una variabile')
+        elif error_type in (';', 'fine', '=', '.', ':', 'vero', 'volte', 'inizio'):
+            print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> \'{error_type}\' mancante')
+        elif error_type == '++_--_expected':
+            print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire o \'++\' o \'--\'')
         raise Exception
 
     def warning(self, warning_type):
         print(f'{YELLOW_STRING}ATTENZIONE:')
         if warning_type == 'empty_body':
-            print(' --> Corpo vuoto, non farà nulla!')
+            print(' --> Corpo del programma vuoto, non farà nulla!')
         elif warning_type == 'se_empty_body':
             print(' --> Corpo del costrutto \'se\' vuoto, non farà nulla!')
         elif warning_type == 'ripeti_empty_body':
             print(' --> Corpo del costrutto \'ripeti\' vuoto, non farà nulla!')
         raise Exception
 
+
 def run(text):
     lexer = Lexer(text)
     tokens = lexer.lex()
+
     print(tokens)
     parser = Parser(tokens)
     tree = parser.parse()
-    #print(tree)
+    # print(tree)
     return tree
