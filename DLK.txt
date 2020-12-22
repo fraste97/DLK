@@ -1,10 +1,10 @@
-intero: a, b, c;
-decimale: a;
-stringa: b;
-boolean: c,d;
+intero: a, b;
+boolean: d;
+stringa: g,h;
+
+
 inizio
-a=2+2*2;
-a=1;
-a=2;
+    a=(2+2)*3;
+    b=2;
 fine.
 

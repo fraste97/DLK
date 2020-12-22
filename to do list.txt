@@ -1,10 +1,4 @@
-PARSER:
-creare i nodi dell'albero: rispettare le precedenze e la sintassi
-
-metodi per le varie regole grammaticali che ritornano un nodo, fino al nodo radice (program)
-
-nodi, diverso tipo, 'puntatori' per i figli (numero non standard)
-    es. operazione_matematica_node ha 2 figli (nodi) e un operatore
-    es. inc_dec_node ha 1 figlio (nodo)
+INTERPRETER:
+riprendere da ASSIGN (ERRORE DI TYPE MISMATCH)
 
 

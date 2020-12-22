@@ -303,20 +303,20 @@ class DeclNode:
 
 
 class ConstNode:
-    def __init__(self, token):
-        self.token = token
+    def __init__(self, child):
+        self.child = child
 
     def __repr__(self):
-        return f'{self.token}'
+        return f'{self.child}'
 
 
 class UnaryOperationNode:
-    def __init__(self, operator, token):
+    def __init__(self, operator, child):
         self.operator = operator
-        self.token = token
+        self.child = child
 
     def __repr__(self):
-        return f'({self.operator}, {self.token})'
+        return f'({self.operator}, {self.child})'
 
 
 class AssignNode:
@@ -776,12 +776,123 @@ class Parser:
         raise Exception
 
 
+class SymbolTable:
+    def __init__(self):
+        self.table = {}
+
+    def decl_operation(self, type, name):
+        if name.value not in self.table:
+            self.table[name.value] = [type.type, None]
+            print(self.table)
+            return True
+        else:
+            return False
+
+    def assign_operation(self, name, val):
+        if name.value in self.table:
+            self.table[name.value][1] = val
+            print(self.table)
+            return True
+        else:
+            return False
+
+
+
+class Interpreter:
+    def __init__(self, tree):
+        self.tree = tree
+        self.pos = []
+        self.symbol_table = SymbolTable()
+
+    def do_node(self, node):
+        method = getattr(self, f'do_{type(node).__name__}')
+        res = method(node)
+        if res is not None:
+            return res
+
+    def interpret(self):
+        try:
+            self.do_node(self.tree)
+        except:
+            return ERROR
+
+    def do_RootNode(self, node):
+        if node.left_child is not None:
+            self.do_node(node.left_child)
+        self.do_node(node.right_child)
+
+    def do_DeclListNode(self, node):
+        self.do_node(node.child)
+        if node.brother is not None:
+            self.do_node(node.brother)
+
+    def do_DeclNode(self, node):
+        self.do_IdNode(node.child, node.type)
+
+    def do_IdNode(self, node, type):
+        child = node.child
+        if not self.symbol_table.decl_operation(type, child):
+            self.pos = child.xy
+            self.error('id_already_symbol_table', child.value)
+        if node.brother is not None:
+            self.do_IdNode(node.brother, type)
+
+    def do_StatNode(self, node):
+        self.do_node(node.child)
+        if node.brother is not None:
+            self.do_StatNode(node.brother)
+
+    def do_AssignNode(self, node):
+        rhs = self.do_node(node.right_child)
+        if not self.symbol_table.assign_operation(node.left_child, rhs):
+            self.error()
+
+    def do_BinaryOperationNode(self, node):
+        op = node.operator
+        lhs = self.do_node(node.left_child)
+        rhs = self.do_node(node.right_child)
+        if op.type == PLUS_TOKEN:
+            return lhs+rhs
+        elif op.type == MIN_TOKEN:
+            return lhs-rhs
+        elif op.type == MUL_TOKEN:
+            return lhs*rhs
+        elif op.type == DIV_TOKEN:
+            if rhs != 0:
+                return lhs/rhs
+            else:
+                self.error('div_0')
+
+    def do_UnaryOperationNode(self, node):
+        if node.operator.type == MIN_TOKEN:
+            return self.do_node(node.child)*(-1)
+        else:
+            return self.do_node(node.child)
+
+    def do_ConstNode(self, node):
+        self.pos = node.child.xy
+        return node.child.value
+
+    def error(self, error_type, name=None):
+        print(f'{RED_STRING}ERRORE DURANTE L\'ESECUZIONE DEL PROGRAMMA:')
+        if error_type == 'div_0':
+            print(f'Alla riga {self.pos[1]} --> Non si può dividere per \'0\'')
+        elif error_type == 'id_already_symbol_table':
+            print(f'Alla riga {self.pos[1]} --> Nome di variabile \'{name}\' già utilizzato')
+        raise Exception
+
+
 def run(text):
     lexer = Lexer(text)
     tokens = lexer.lex()
 
-    print(tokens)
+    #print(tokens)
     parser = Parser(tokens)
     tree = parser.parse()
+    #print(type(tree.right_child.brother.brother))
+    #print(tree.right_child.brother.brother)
 
-    return tree
+    interpreter = Interpreter(tree)
+    interpreter.interpret()
+
+    return ERROR
