@@ -252,7 +252,7 @@ class RootNode:
 
     def __repr__(self):
         if self.left_child is not None:
-            return f'<{self.left_child}, {self.right_child}>'
+            return f'<[{self.left_child}], {self.right_child}>'
         else:
             return f'{self.right_child}'
 
@@ -276,9 +276,9 @@ class IdNode:
 
     def __repr__(self):
         if self.brother is not None:
-            return f'({self.child}, {self.brother})'
+            return f'{self.child}, {self.brother}'
         else:
-            return f'({self.child})'
+            return f'{self.child}'
 
 
 class DeclListNode:
@@ -288,9 +288,9 @@ class DeclListNode:
 
     def __repr__(self):
         if self.brother is not None:
-            return f'({self.child},{self.brother})'
+            return f'{self.child},{self.brother}'
         else:
-            return f'({self.child})'
+            return f'{self.child}'
 
 
 class DeclNode:
@@ -299,7 +299,7 @@ class DeclNode:
         self.type = type
 
     def __repr__(self):
-            return f'{self.type}{self.child}'
+            return f'{self.type}({self.child})'
 
 
 class ConstNode:
@@ -320,13 +320,12 @@ class UnaryOperationNode:
 
 
 class AssignNode:
-    def __init__(self, left_child, operator, right_child):
+    def __init__(self, left_child, right_child):
         self.left_child = left_child
         self.right_child = right_child
-        self.operator = operator
 
     def __repr__(self):
-        return f'({self.left_child}, {self.operator}, {self.right_child})'
+        return f'({self.left_child}, ASSIGN, {self.right_child})'
 
 
 class RelExprNode:
@@ -438,7 +437,7 @@ class Parser:
     def decl_list(self):
         child = self.decl()
         while self.token.type in ('INTERO', 'DECIMALE', 'STRINGA', 'BOOLEAN'):
-            brother = self.decl()
+            brother = self.decl_list()
             child = DeclListNode(child, brother)
         return child
 
@@ -456,14 +455,20 @@ class Parser:
 
     def id_list(self):
         if self.token.type == ID_TOKEN:
-            child = IdNode(self.token)
+            entered = False
+            child = self.token
             self.advance()
             while self.token.type == COMMA_TOKEN:
+                entered = True
                 self.advance()
                 brother = self.id_list()
                 child = IdNode(child, brother)
-        return child
-
+            if entered:
+                return child
+            else:
+                return IdNode(child)
+        else:
+            self.error('id_expected')
 
     def body(self):
         stat_list = self.stat_list()
@@ -483,7 +488,7 @@ class Parser:
 
             while self.token.type != 'FINE' and self.token.type != EOF_TOKEN and self.token.type != 'ALTRIMENTI':
                 stat_list_entered = True
-                brother = self.stat()
+                brother = self.stat_list()
                 child = StatNode(child, brother)
             if stat_list_entered:
                 return child
@@ -522,12 +527,10 @@ class Parser:
         if self.token.type == ID_TOKEN:
             id = self.token
             self.advance()
-            if self.token.type == ASSIGN_TOKEN:
-                op = self.token.type
-                self.advance()
+            if self.match(ASSIGN_TOKEN):
                 rhs = self.rhs_assign_stat()
                 if rhs is not None:
-                    return AssignNode(id, op, rhs)
+                    return AssignNode(id, rhs)
                 else:
                     self.error('expr_expected')
             else:

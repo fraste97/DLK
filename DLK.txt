@@ -1,21 +1,10 @@
-intero:a,b,c,d;
+intero: a, b, c;
 decimale: a;
+stringa: b;
+boolean: c,d;
 inizio
-    i=1;
-    pi=3.14;
-    a = radice(2+7/(-1+1));
-    richiesta="Inserire il raggio del cerchio numero";
-    ripeti 10 volte:
-        scrivi(richiesta);
-        scrivi(i);
-        inserisci(raggio);
-        stop;
-        circonferenza = 2*pi*raggio;
-        se(circonferenza < 100) vero fai:
-            scrivi("\nIl cerchio è piccolo!\n");
-        altrimenti:
-            scrivi("\nIl cerchio è grande!\n");
-        fine;
-    fine;
+a=2+2*2;
+a=1;
+a=2;
 fine.
 
