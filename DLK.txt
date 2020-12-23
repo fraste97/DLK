@@ -1,10 +1,14 @@
 intero: a, b;
-boolean: d;
+decimale: z;
+boolean: c;
 stringa: g,h;
 
 
 inizio
-    a=(2+2)*3;
+    a=12;
     b=2;
+    a=b;
+
+
 fine.
 

@@ -1,4 +1,5 @@
 import string
+import math
 
 PLUS_TOKEN = 'PLUS'
 MIN_TOKEN = 'MIN'
@@ -37,6 +38,8 @@ DIGITS = '0123456789'
 ALPHANUM = LETTERS + DIGITS
 KEYWORDS = ['INTERO', 'DECIMALE', 'STRINGA', 'BOOLEAN', 'INIZIO', 'FINE', 'STOP', 'RADICE',
             'SE', 'VERO', 'FAI', 'FALSO', 'RIPETI', 'VOLTE', 'SCRIVI', 'INSERISCI', 'E', 'O', 'ALTRIMENTI']
+
+TYPE_DIC = {'str': 'STRINGA', 'int': 'INTERO', 'float': 'DECIMALE', 'bool': 'BOOLEAN'}
 
 
 class Token:
@@ -111,7 +114,7 @@ class Lexer:
             tokens.append(Token(EOF_TOKEN, self.get_xy()))
             return tokens
         except Exception as e:
-            #traceback.print_exc()
+            # traceback.print_exc()
             return ERROR
 
     def sugar(self):
@@ -185,7 +188,12 @@ class Lexer:
             string += self.char
             self.advance()
         if string.upper() in KEYWORDS:
-            return Token(string.upper(), start)
+            if string.upper() == 'VERO':
+                return Token(string.upper(), start, True)
+            elif string.upper() == 'FALSO':
+                return Token(string.upper(), start, False)
+            else:
+                return Token(string.upper(), start)
         else:
             return Token(ID_TOKEN, start, string)
 
@@ -299,7 +307,7 @@ class DeclNode:
         self.type = type
 
     def __repr__(self):
-            return f'{self.type}({self.child})'
+        return f'{self.type}({self.child})'
 
 
 class ConstNode:
@@ -501,7 +509,8 @@ class Parser:
                 stat = self.assign_stat()
             elif self.tokens_list[self.pos + 1].type in (DEC_TOKEN, INC_TOKEN):
                 stat = self.inc_dec_stat()
-            elif self.tokens_list[self.pos + 1].type in (ID_TOKEN, DEC_TOKEN, 'VERO', 'FALSO', INTERO_TOKEN, STRINGA_TOKEN):
+            elif self.tokens_list[self.pos + 1].type in (
+            ID_TOKEN, DEC_TOKEN, 'VERO', 'FALSO', INTERO_TOKEN, STRINGA_TOKEN):
                 self.error('=')
             else:
                 self.error('++_--_expected')
@@ -595,7 +604,7 @@ class Parser:
             self.error('factor_expected')
 
     def radice_stat(self):
-        sqrt = self.token.type
+        sqrt = self.token
         self.advance()
         if self.match(LEFT_PAR_TOKEN):
             expr = self.math_expr()
@@ -746,17 +755,21 @@ class Parser:
         elif error_type == 'id_expected':
             print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire un nome di variabile')
         elif error_type == 'expr_expected':
-            print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire o un numero o un valore booleano o una variabile o un espressione matematica')
+            print(
+                f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire o un numero o un valore booleano o una variabile o un espressione matematica')
         elif error_type == 'no_body':
-            print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Manca il corpo del programma \'INIZIO...FINE\'')
+            print(
+                f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Manca il corpo del programma \'INIZIO...FINE\'')
         elif error_type == 'factor_expected':
             print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire o un numero o una variabile')
         elif error_type == 'term_expected':
-            print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire o un numero o una variabile o un espressione booleana')
+            print(
+                f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire o un numero o una variabile o un espressione booleana')
         elif error_type == 'int_expected':
             print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Numero intero mancante')
         elif error_type == 'arg_expected':
-            print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire una stringa o un numero o una variabile')
+            print(
+                f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire una stringa o un numero o una variabile')
         elif error_type in (';', 'fine', '=', '.', ':', 'vero', 'volte', 'inizio'):
             print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> \'{error_type}\' mancante')
         elif error_type == '++_--_expected':
@@ -789,14 +802,43 @@ class SymbolTable:
             return False
 
     def assign_operation(self, name, val):
-        if name.value in self.table:
-            self.table[name.value][1] = val
-            print(self.table)
+        type_ = self.table[name.value][0]
+        res = True
+        if not isinstance(val, bool):
+            if type_ == 'INTERO':
+                if isinstance(val, (int, float)):
+                    self.table[name.value][1] = int(val)
+                else:
+                    res = False
+            elif type_ == 'DECIMALE':
+                if isinstance(val, (int, float)):
+                    self.table[name.value][1] = float(val)
+                else:
+                    res = False
+            elif type_ == 'STRINGA':
+                if isinstance(val, str):
+                    self.table[name.value][1] = val
+                else:
+                    res = False
+            else:
+                res = False
+        else:
+            if type_ == 'BOOLEAN':
+                self.table[name.value][1] = val
+            else:
+                res = False
+
+        print(self.table)
+        return res
+
+    def check(self, id):
+        if id.value in self.table:
             return True
         else:
             return False
 
-
+    def get_num_value(self, id):
+        return self.table[id.value][1]
 
 class Interpreter:
     def __init__(self, tree):
@@ -814,71 +856,101 @@ class Interpreter:
         try:
             self.do_node(self.tree)
         except:
+            traceback.print_exc() # TOGLIERE, SOLO PER DEBUGGING
             return ERROR
 
     def do_RootNode(self, node):
         if node.left_child is not None:
-            self.do_node(node.left_child)
-        self.do_node(node.right_child)
+            self.do_node(node.left_child)  # DeclListNode
+        self.do_node(node.right_child)  # StatNode
 
     def do_DeclListNode(self, node):
-        self.do_node(node.child)
+        self.do_node(node.child)  # DeclNode
         if node.brother is not None:
-            self.do_node(node.brother)
+            self.do_node(node.brother)  # DeclNode
 
     def do_DeclNode(self, node):
         self.do_IdNode(node.child, node.type)
 
     def do_IdNode(self, node, type):
         child = node.child
-        if not self.symbol_table.decl_operation(type, child):
+        if not self.symbol_table.decl_operation(type, child):  # aggiunge l'ID alla symbol table
             self.pos = child.xy
             self.error('id_already_symbol_table', child.value)
         if node.brother is not None:
             self.do_IdNode(node.brother, type)
 
     def do_StatNode(self, node):
-        self.do_node(node.child)
+        self.do_node(node.child)  # AssignNode, seNode...
         if node.brother is not None:
             self.do_StatNode(node.brother)
 
     def do_AssignNode(self, node):
-        rhs = self.do_node(node.right_child)
-        if not self.symbol_table.assign_operation(node.left_child, rhs):
-            self.error()
+        if self.symbol_table.check(node.left_child):
+            rhs = self.do_node(node.right_child)  # ConstNode, BinaryOperationNode
+            if not self.symbol_table.assign_operation(node.left_child, rhs):
+                self.pos = node.left_child.xy
+                self.error('type_mismatch', node.left_child.value, type(rhs).__name__)
+
+        else:
+            self.pos = node.left_child.xy
+            self.error('id_not_decl', node.left_child.value)
 
     def do_BinaryOperationNode(self, node):
         op = node.operator
-        lhs = self.do_node(node.left_child)
-        rhs = self.do_node(node.right_child)
+        lhs = self.do_node(node.left_child)  # BinaryOperationNode, ConstNode, UnaryOperationNode
+        rhs = self.do_node(node.right_child)  # BinaryOperationNode, ConstNode, UnaryOperationNode
         if op.type == PLUS_TOKEN:
-            return lhs+rhs
+            return lhs + rhs
         elif op.type == MIN_TOKEN:
-            return lhs-rhs
+            return lhs - rhs
         elif op.type == MUL_TOKEN:
-            return lhs*rhs
+            return lhs * rhs
         elif op.type == DIV_TOKEN:
             if rhs != 0:
-                return lhs/rhs
+                return lhs / rhs
             else:
+                self.pos = node.operator.xy
                 self.error('div_0')
 
     def do_UnaryOperationNode(self, node):
+
         if node.operator.type == MIN_TOKEN:
-            return self.do_node(node.child)*(-1)
+            return self.do_node(node.child) * (-1)  # BinaryOperationNode, ConstNode, UnaryOperationNode
+        elif node.operator.type == 'RADICE':
+
+            arg = self.do_node(node.child)
+            if arg >= 0:
+                return math.sqrt(arg)
+            else:
+                self.pos = node.operator.xy
+                self.error('sqrt_arg')
         else:
             return self.do_node(node.child)
 
     def do_ConstNode(self, node):
-        self.pos = node.child.xy
-        return node.child.value
+        # self.pos = node.child.xy
+        if node.child.type == ID_TOKEN:
+            if self.symbol_table.check(node.child):
+                return self.symbol_table.get_num_value(node.child) #aggiungere controllo type, solo int dec ammessi
+            else:
+                self.pos = node.child.xy
+                self.error('id_not_decl', node.child.value)
+        else:
+            return node.child.value
 
-    def error(self, error_type, name=None):
+    def error(self, error_type, var_name=None, var_type=None):
         print(f'{RED_STRING}ERRORE DURANTE L\'ESECUZIONE DEL PROGRAMMA:')
         if error_type == 'div_0':
             print(f'Alla riga {self.pos[1]} --> Non si può dividere per \'0\'')
         elif error_type == 'id_already_symbol_table':
-            print(f'Alla riga {self.pos[1]} --> Nome di variabile \'{name}\' già utilizzato')
+            print(f'Alla riga {self.pos[1]} --> Nome di variabile \'{var_name}\' già utilizzato')
+        elif error_type == 'id_not_decl':
+            print(f'Alla riga {self.pos[1]} --> Variabile \'{var_name}\' non dichiarata')
+        elif error_type == 'type_mismatch':
+            print(f'Alla riga {self.pos[1]} --> Il tipo della variabile \'{var_name}\' NON è \'{TYPE_DIC[var_type]}\'')
+        elif error_type == 'sqrt_arg':
+            print(f'Alla riga {self.pos[1]} --> L\'argomento della \'radice\' deve essere positivo')
         raise Exception
 
 
@@ -886,11 +958,11 @@ def run(text):
     lexer = Lexer(text)
     tokens = lexer.lex()
 
-    #print(tokens)
+    # print(tokens)
     parser = Parser(tokens)
     tree = parser.parse()
-    #print(type(tree.right_child.brother.brother))
-    #print(tree.right_child.brother.brother)
+    # print(type(tree.right_child.brother.brother))
+    # print(tree.right_child.brother.brother)
 
     interpreter = Interpreter(tree)
     interpreter.interpret()
