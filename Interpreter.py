@@ -406,11 +406,11 @@ class ScriviNode:
 
 
 class InserisciNode:
-    def __init__(self, arg_token):
-        self.arg_token = arg_token
+    def __init__(self, child):
+        self.child = child
 
     def __repr__(self):
-        return f'(inserisci({self.arg_token}))'
+        return f'(inserisci({self.child}))'
 
 
 class Parser:
@@ -805,7 +805,7 @@ class SymbolTable:
     def decl_operation(self, type, name):
         if name.value not in self.table:
             self.table[name.value] = [type.type, None]
-            print(self.table)
+            # print(self.table)
             return True
         else:
             return False
@@ -837,7 +837,7 @@ class SymbolTable:
             else:
                 res = False
 
-        print(self.table)
+        # print(self.table)
         return res
 
     def check(self, id):
@@ -846,13 +846,7 @@ class SymbolTable:
         else:
             return False
 
-    def is_num(self, id):
-        if self.table[id.value][0] in ('INTERO', 'DECIMALE'):
-            return True
-        else:
-            return False
-
-    def get_num_value(self, id):
+    def get_value(self, id):
         return self.table[id.value][1]
 
 
@@ -903,7 +897,7 @@ class Interpreter:
 
     def do_AssignNode(self, node):
         if self.symbol_table.check(node.left_child):
-            rhs = self.do_node(node.right_child)  # ConstNode, BinaryOperationNode
+            rhs = self.do_node(node.right_child)  # ConstNode, BinaryOperationNode, UnaryOperationNode
             if not self.symbol_table.assign_operation(node.left_child, rhs):
                 self.pos = node.left_child.xy
                 self.error('type_mismatch', node.left_child.value, type(rhs).__name__)
@@ -932,10 +926,10 @@ class Interpreter:
                         self.pos = node.operator.xy
                         self.error('div_0')
             else:
-                self.pos = node.right_child.child.xy
+                self.pos = node.operator.xy
                 self.error('not_num_expr')
         else:
-            self.pos = node.left_child.child.xy
+            self.pos = node.operator.xy
             self.error('not_num_expr')
 
     def do_UnaryOperationNode(self, node):
@@ -943,44 +937,46 @@ class Interpreter:
             return self.do_node(node.child) * (-1)  # BinaryOperationNode, ConstNode, UnaryOperationNode
         elif node.operator.type == 'RADICE':
             arg = self.do_node(node.child) # FARE CONTROLLO NUMERO (NO BOOL, NO STR)
-            if arg >= 0:
-                return math.sqrt(arg)
+            if type(arg) in ('int', 'float'):
+                if arg >= 0:
+                    return math.sqrt(arg)
+                else:
+                    self.pos = node.operator.xy
+                    self.error('sqrt_arg')
             else:
                 self.pos = node.operator.xy
-                self.error('sqrt_arg')
+                self.error('sqrt_arg_not_num')
         else:
             return self.do_node(node.child)
 
     def do_IncDecNode(self, node):
-        if self.symbol_table.check(node.child.child):
-            if self.symbol_table.is_num(node.child.child):
-                if node.operator.type == INC_TOKEN:
-                    id_val = self.do_node(node.child)
-                    if id_val is not None:
-                        id_val += 1
-                    else:
-                        self.pos = node.child.child.xy
-                        self.error('id_not_value_yet_inc', node.child.child.value)
-                else:
-                    id_val = self.do_node(node.child)
-                    if id_val is not None:
-                        id_val -= 1
-                    else:
-                        self.pos = node.child.child.xy
-                        self.error('id_not_value_yet_dec', node.child.child.value)
-                self.symbol_table.assign_operation(node.child.child, id_val)
-            else:
+        if node.operator.type == INC_TOKEN:
+            id_val = self.do_node(node.child)
+            print(type(id_val))
+            if isinstance(id_val, (bool, str)):
                 self.pos = node.child.child.xy
                 self.error('id_not_num', node.child.child.value)
+            else:
+                id_val += 1
         else:
-            self.pos = node.left_child.xy
-            self.error('id_not_decl', node.left_child.value)
+            id_val = self.do_node(node.child)
+            if isinstance(id_val, (bool, str)):
+                self.pos = node.child.child.xy
+                self.error('id_not_num', node.child.child.value)
+            else:
+                id_val -= 1
+
+        self.symbol_table.assign_operation(node.child.child, id_val)
 
     def do_ConstNode(self, node):
-        # self.pos = node.child.xy
         if node.child.type == ID_TOKEN:
             if self.symbol_table.check(node.child):
-                return self.symbol_table.get_num_value(node.child) #aggiungere controllo type, solo int dec ammessi
+                val = self.symbol_table.get_value(node.child)
+                if val is not None:
+                    return val
+                else:
+                    self.pos = node.child.xy
+                    self.error('id_none', node.child.value)
             else:
                 self.pos = node.child.xy
                 self.error('id_not_decl', node.child.value)
@@ -997,6 +993,16 @@ class Interpreter:
             arg_to_print = bytes(arg_to_print, "utf-8").decode("unicode_escape")
             print(arg_to_print)
 
+    def do_InserisciNode(self, node):
+        input_val = my_input()
+        if self.symbol_table.check(node.child):
+            if not self.symbol_table.assign_operation(node.child, input_val):
+                self.pos = node.child.xy
+                self.error('type_mismatch_inserisci', node.child.value, type(input_val).__name__)
+        else:
+            self.pos = node.child.xy
+            self.error('id_not_decl', node.child.value)
+
     def error(self, error_type, var_name=None, var_type=None):
 
         print(f'{RED_STRING}ERRORE DURANTE L\'ESECUZIONE DEL PROGRAMMA:')
@@ -1008,16 +1014,18 @@ class Interpreter:
             print(f'Alla riga {self.pos[1]} --> Variabile \'{var_name}\' non dichiarata')
         elif error_type == 'type_mismatch':
             print(f'Alla riga {self.pos[1]} --> Il tipo della variabile \'{var_name}\' non è \'{TYPE_DIC[var_type]}\'')
+        elif error_type == 'type_mismatch_inserisci':
+            print(f'Alla riga {self.pos[1]} --> Il tipo della variabile \'{var_name}\' non è \'{TYPE_DIC[var_type]}\' come il valore che hai inserito')
         elif error_type == 'sqrt_arg':
             print(f'Alla riga {self.pos[1]} --> L\'argomento della \'radice\' deve essere positivo')
-        elif error_type == 'id_not_value_yet_inc':
-            print(f'Alla riga {self.pos[1]} --> Alla variabile \'{var_name}\' non è stato assegnato alcun valore da incrementare')
-        elif error_type == 'id_not_value_yet_dec':
-            print(f'Alla riga {self.pos[1]} --> Alla variabile \'{var_name}\' non è stato assegnato alcun valore da decrementare')
         elif error_type == 'id_not_num':
             print(f'Alla riga {self.pos[1]} --> La variabile \'{var_name}\' non è un numero')
         elif error_type == 'not_num_expr':
             print(f'Alla riga {self.pos[1]} --> L\'espressione contiene valori non numerici')
+        elif error_type == 'sqrt_arg_not_num':
+            print(f'Alla riga {self.pos[1]} --> L\'argomento della radice non è un numero')
+        elif error_type == 'id_none':
+            print(f'Alla riga {self.pos[1]} --> Alla variabile \'{var_name}\' non è stato assegnato alcun valore')
         raise Exception
 
 
@@ -1035,3 +1043,19 @@ def run(text):
     interpreter.interpret()
 
     return ERROR
+
+def my_input():
+    val = input()
+    if val.upper() == 'VERO':
+        return True
+    elif val.upper() == 'FALSO':
+        return False
+    else:
+        try:
+            return int(val)
+        except:
+            try:
+                return float(val)
+            except:
+                return val
+

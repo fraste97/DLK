@@ -1,6 +1,5 @@
 import Interpreter
 
-
 text_file = open("DLK.txt", encoding='utf-8')
 lexer_result = (Interpreter.run(text_file.read()))
 
