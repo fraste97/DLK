@@ -1,4 +1,15 @@
 INTERPRETER:
-riprendere da ASSIGN (ERRORE DI TYPE MISMATCH)
+riprendere da ASSIGN (ERRORE DI TYPE MISMATCH in math expr)
+
+binary --> inc dec
+rel expr node
+logical expr node
+se
+ripeti
+
+inserisci
+
+STOP
+
 
 

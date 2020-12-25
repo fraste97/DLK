@@ -5,9 +5,12 @@ stringa: g,h;
 
 
 inizio
-    a=12;
-    b=2;
-    a=b;
+a=1;
+g="ciao";
+c=vero;
+z=2;
+b=radice(b);
+scrivi(b);
 
 
 fine.

@@ -318,6 +318,15 @@ class ConstNode:
         return f'{self.child}'
 
 
+class IncDecNode:
+    def __init__(self, operator, child):
+        self.operator = operator
+        self.child = child
+
+    def __repr__(self):
+        return f'({self.operator}, {self.child})'
+
+
 class UnaryOperationNode:
     def __init__(self, operator, child):
         self.operator = operator
@@ -389,11 +398,11 @@ class RipetiNode:
 
 
 class ScriviNode:
-    def __init__(self, arg_token):
-        self.arg_token = arg_token
+    def __init__(self, child):
+        self.child = child
 
     def __repr__(self):
-        return f'(scrivi({self.arg_token}))'
+        return f'(scrivi({self.child}))'
 
 
 class InserisciNode:
@@ -744,7 +753,7 @@ class Parser:
         self.advance()
         op = self.token
         self.advance()
-        return UnaryOperationNode(op, id)
+        return IncDecNode(op, ConstNode(id))
 
     def error(self, error_type):
         print(f'{RED_STRING}ERRORE DI SINTASSI:')
@@ -837,8 +846,15 @@ class SymbolTable:
         else:
             return False
 
+    def is_num(self, id):
+        if self.table[id.value][0] in ('INTERO', 'DECIMALE'):
+            return True
+        else:
+            return False
+
     def get_num_value(self, id):
         return self.table[id.value][1]
+
 
 class Interpreter:
     def __init__(self, tree):
@@ -900,26 +916,33 @@ class Interpreter:
         op = node.operator
         lhs = self.do_node(node.left_child)  # BinaryOperationNode, ConstNode, UnaryOperationNode
         rhs = self.do_node(node.right_child)  # BinaryOperationNode, ConstNode, UnaryOperationNode
-        if op.type == PLUS_TOKEN:
-            return lhs + rhs
-        elif op.type == MIN_TOKEN:
-            return lhs - rhs
-        elif op.type == MUL_TOKEN:
-            return lhs * rhs
-        elif op.type == DIV_TOKEN:
-            if rhs != 0:
-                return lhs / rhs
+
+        if type(rhs).__name__ in ('int', 'float'):
+            if type(lhs).__name__ in ('int', 'float'):
+                if op.type == PLUS_TOKEN:
+                    return lhs + rhs
+                elif op.type == MIN_TOKEN:
+                    return lhs - rhs
+                elif op.type == MUL_TOKEN:
+                    return lhs * rhs
+                elif op.type == DIV_TOKEN:
+                    if rhs != 0:
+                        return lhs / rhs
+                    else:
+                        self.pos = node.operator.xy
+                        self.error('div_0')
             else:
-                self.pos = node.operator.xy
-                self.error('div_0')
+                self.pos = node.right_child.child.xy
+                self.error('not_num_expr')
+        else:
+            self.pos = node.left_child.child.xy
+            self.error('not_num_expr')
 
     def do_UnaryOperationNode(self, node):
-
         if node.operator.type == MIN_TOKEN:
             return self.do_node(node.child) * (-1)  # BinaryOperationNode, ConstNode, UnaryOperationNode
         elif node.operator.type == 'RADICE':
-
-            arg = self.do_node(node.child)
+            arg = self.do_node(node.child) # FARE CONTROLLO NUMERO (NO BOOL, NO STR)
             if arg >= 0:
                 return math.sqrt(arg)
             else:
@@ -927,6 +950,31 @@ class Interpreter:
                 self.error('sqrt_arg')
         else:
             return self.do_node(node.child)
+
+    def do_IncDecNode(self, node):
+        if self.symbol_table.check(node.child.child):
+            if self.symbol_table.is_num(node.child.child):
+                if node.operator.type == INC_TOKEN:
+                    id_val = self.do_node(node.child)
+                    if id_val is not None:
+                        id_val += 1
+                    else:
+                        self.pos = node.child.child.xy
+                        self.error('id_not_value_yet_inc', node.child.child.value)
+                else:
+                    id_val = self.do_node(node.child)
+                    if id_val is not None:
+                        id_val -= 1
+                    else:
+                        self.pos = node.child.child.xy
+                        self.error('id_not_value_yet_dec', node.child.child.value)
+                self.symbol_table.assign_operation(node.child.child, id_val)
+            else:
+                self.pos = node.child.child.xy
+                self.error('id_not_num', node.child.child.value)
+        else:
+            self.pos = node.left_child.xy
+            self.error('id_not_decl', node.left_child.value)
 
     def do_ConstNode(self, node):
         # self.pos = node.child.xy
@@ -939,7 +987,18 @@ class Interpreter:
         else:
             return node.child.value
 
+    def do_ScriviNode(self, node):
+        arg_to_print = str(self.do_node(node.child))
+        if arg_to_print == 'False':
+            print('FALSO')
+        elif arg_to_print == 'True':
+            print('VERO')
+        else:
+            arg_to_print = bytes(arg_to_print, "utf-8").decode("unicode_escape")
+            print(arg_to_print)
+
     def error(self, error_type, var_name=None, var_type=None):
+
         print(f'{RED_STRING}ERRORE DURANTE L\'ESECUZIONE DEL PROGRAMMA:')
         if error_type == 'div_0':
             print(f'Alla riga {self.pos[1]} --> Non si può dividere per \'0\'')
@@ -948,9 +1007,17 @@ class Interpreter:
         elif error_type == 'id_not_decl':
             print(f'Alla riga {self.pos[1]} --> Variabile \'{var_name}\' non dichiarata')
         elif error_type == 'type_mismatch':
-            print(f'Alla riga {self.pos[1]} --> Il tipo della variabile \'{var_name}\' NON è \'{TYPE_DIC[var_type]}\'')
+            print(f'Alla riga {self.pos[1]} --> Il tipo della variabile \'{var_name}\' non è \'{TYPE_DIC[var_type]}\'')
         elif error_type == 'sqrt_arg':
             print(f'Alla riga {self.pos[1]} --> L\'argomento della \'radice\' deve essere positivo')
+        elif error_type == 'id_not_value_yet_inc':
+            print(f'Alla riga {self.pos[1]} --> Alla variabile \'{var_name}\' non è stato assegnato alcun valore da incrementare')
+        elif error_type == 'id_not_value_yet_dec':
+            print(f'Alla riga {self.pos[1]} --> Alla variabile \'{var_name}\' non è stato assegnato alcun valore da decrementare')
+        elif error_type == 'id_not_num':
+            print(f'Alla riga {self.pos[1]} --> La variabile \'{var_name}\' non è un numero')
+        elif error_type == 'not_num_expr':
+            print(f'Alla riga {self.pos[1]} --> L\'espressione contiene valori non numerici')
         raise Exception
 
 
