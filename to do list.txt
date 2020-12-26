@@ -3,10 +3,8 @@ INTERPRETER:
 rel expr node
 logical expr node
 se
-ripeti
 
-
-STOP
+--->STOP
 
 
 

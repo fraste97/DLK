@@ -775,7 +775,7 @@ class Parser:
             print(
                 f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire o un numero o una variabile o un espressione booleana')
         elif error_type == 'int_expected':
-            print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Numero intero mancante')
+            print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire un numero intero')
         elif error_type == 'arg_expected':
             print(
                 f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire una stringa o un numero o una variabile')
@@ -1003,6 +1003,10 @@ class Interpreter:
             self.pos = node.child.xy
             self.error('id_not_decl', node.child.value)
 
+    def do_RipetiNode(self, node):
+        for i in range(node.num_token.value):
+            self.do_node(node.child)
+
     def error(self, error_type, var_name=None, var_type=None):
 
         print(f'{RED_STRING}ERRORE DURANTE L\'ESECUZIONE DEL PROGRAMMA:')
@@ -1029,21 +1033,6 @@ class Interpreter:
         raise Exception
 
 
-def run(text):
-    lexer = Lexer(text)
-    tokens = lexer.lex()
-
-    # print(tokens)
-    parser = Parser(tokens)
-    tree = parser.parse()
-    # print(type(tree.right_child.brother.brother))
-    # print(tree.right_child.brother.brother)
-
-    interpreter = Interpreter(tree)
-    interpreter.interpret()
-
-    return ERROR
-
 def my_input():
     val = input()
     if val.upper() == 'VERO':
@@ -1059,3 +1048,18 @@ def my_input():
             except:
                 return val
 
+
+def run(text):
+    lexer = Lexer(text)
+    tokens = lexer.lex()
+
+    # print(tokens)
+    parser = Parser(tokens)
+    tree = parser.parse()
+    # print(type(tree.right_child.brother.brother))
+    # print(tree.right_child.brother.brother)
+
+    interpreter = Interpreter(tree)
+    interpreter.interpret()
+
+    return ERROR

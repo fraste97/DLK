@@ -6,14 +6,26 @@ stringa: g,h;
 
 inizio
     pi = 3.14;
+    a=2;
+    ripeti a volte:
+        scrivi(pi);
+        ripeti 2 volte:
+            scrivi("wow");
+        fine;
+    fine;
 
     scrivi("Programma per il calcolo della circonferenza");
+
+
     scrivi("Inserire il valore del raggio:");
+
+
 
     inserisci(raggio);
     circonferenza = 2*pi*raggio;
     scrivi("La circonferenza misura:");
     scrivi(circonferenza);
+
 
 fine.
 
