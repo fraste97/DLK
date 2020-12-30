@@ -1,31 +1,24 @@
-intero: a, b, raggio;
-decimale: z, pi, circonferenza;
-boolean: c;
-stringa: g,h;
-
+intero: raggio, circonferenza, i;
+decimale: pi;
+stringa: richiesta;
 
 inizio
-    pi = 3.14;
-    a=2;
-    ripeti a volte:
-        scrivi(pi);
-        ripeti 2 volte:
-            scrivi("wow");
+    i=1;
+    pi=3.14;
+    richiesta="Inserire il raggio del cerchio numero";
+    ripeti 10 volte:
+        scrivi(richiesta);
+        scrivi(i);
+        inserisci(raggio);
+        se(raggio == 0 o raggio < 0) vero fai:
+            stop;
         fine;
+        circonferenza = 2*pi*raggio;
+        se(circonferenza < 100) vero fai:
+            scrivi("\nIl cerchio è piccolo!\n");
+        altrimenti:
+            scrivi("\nIl cerchio è grande!\n");
+        fine;
+        i++;
     fine;
-
-    scrivi("Programma per il calcolo della circonferenza");
-
-
-    scrivi("Inserire il valore del raggio:");
-
-
-
-    inserisci(raggio);
-    circonferenza = 2*pi*raggio;
-    scrivi("La circonferenza misura:");
-    scrivi(circonferenza);
-
-
 fine.
-

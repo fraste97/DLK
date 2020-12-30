@@ -1,10 +1,6 @@
 INTERPRETER:
 
-rel expr node
-logical expr node
-se
-
---->STOP
+dimenticato un print(type) in inc dec cercarlo
 
 
 

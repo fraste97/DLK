@@ -413,6 +413,14 @@ class InserisciNode:
         return f'(inserisci({self.child}))'
 
 
+class StopNode:
+    def __init__(self, stop_tok):
+        self.stop_tok = stop_tok
+
+    def __repr__(self):
+        return f'{self.stop_tok.type}'
+
+
 class Parser:
     def __init__(self, tokens_list):
         self.tokens_list = tokens_list
@@ -532,7 +540,7 @@ class Parser:
         elif self.match('INSERISCI'):
             stat = self.inserisci_stat()
         elif self.token.type == 'STOP':
-            stat = self.token
+            stat = StopNode(self.token)
             self.advance()
         else:
             self.error('unexpected_token')
@@ -688,10 +696,12 @@ class Parser:
         if token.type in (INTERO_TOKEN, DECIMALE_TOKEN, ID_TOKEN):
             self.advance()
             return ConstNode(token)
-        elif self.match(RIGHT_PAR_TOKEN):
+        elif self.match(LEFT_PAR_TOKEN):
             expr = self.logical_expr()
-            self.advance()
-            return expr
+            if self.match(RIGHT_PAR_TOKEN):
+                return expr
+            else:
+                self.error(')_expected')
         else:
             self.error('term_expected')
 
@@ -855,6 +865,7 @@ class Interpreter:
         self.tree = tree
         self.pos = []
         self.symbol_table = SymbolTable()
+        self.in_loop = -1
 
     def do_node(self, node):
         method = getattr(self, f'do_{type(node).__name__}')
@@ -866,7 +877,7 @@ class Interpreter:
         try:
             self.do_node(self.tree)
         except:
-            traceback.print_exc() # TOGLIERE, SOLO PER DEBUGGING
+            # traceback.print_exc() # Debugging
             return ERROR
 
     def do_RootNode(self, node):
@@ -936,7 +947,7 @@ class Interpreter:
         if node.operator.type == MIN_TOKEN:
             return self.do_node(node.child) * (-1)  # BinaryOperationNode, ConstNode, UnaryOperationNode
         elif node.operator.type == 'RADICE':
-            arg = self.do_node(node.child) # FARE CONTROLLO NUMERO (NO BOOL, NO STR)
+            arg = self.do_node(node.child)
             if type(arg) in ('int', 'float'):
                 if arg >= 0:
                     return math.sqrt(arg)
@@ -990,7 +1001,9 @@ class Interpreter:
         elif arg_to_print == 'True':
             print('VERO')
         else:
-            arg_to_print = bytes(arg_to_print, "utf-8").decode("unicode_escape")
+            # arg_to_print = bytes(arg_to_print, "utf-8").decode("unicode_escape")
+            arg_to_print = arg_to_print.replace('\\n', '\n')  # necessario, altrimenti verrebbe stampato \n e non andrebbe a capo
+            arg_to_print = arg_to_print.replace('\\t', '\t')
             print(arg_to_print)
 
     def do_InserisciNode(self, node):
@@ -1004,8 +1017,63 @@ class Interpreter:
             self.error('id_not_decl', node.child.value)
 
     def do_RipetiNode(self, node):
-        for i in range(node.num_token.value):
-            self.do_node(node.child)
+        try:
+            self.in_loop += 1
+            for i in range(node.num_token.value):
+                self.do_node(node.child)
+        except:
+            pass
+        self.in_loop -= 1
+
+    def do_SeNode(self, node):
+        cond = self.do_node(node.logical_expr)
+        if cond:
+            self.do_node(node.stat_node)
+
+        if node.altrimenti_stat_node is not None:
+            if not cond:
+                self.do_node(node.altrimenti_stat_node)
+
+    def do_LogicalExprNode(self, node):
+        lhs = self.do_node(node.left_child)
+        rhs = self.do_node(node.right_child)
+        if node.operator.type == 'E':
+            return lhs and rhs
+        else:
+            return lhs or rhs
+
+    def do_RelExprNode(self, node):
+        lhs = self.do_node(node.left_child)
+        rhs = self.do_node(node.right_child)
+
+        if node.operator.type == EQ_TOKEN:
+            return lhs == rhs
+        elif node.operator.type == NEQ_TOKEN:
+            return lhs != rhs
+
+        elif isinstance(lhs, str) and not isinstance(rhs, str):
+            lhs = len(lhs)
+        elif not isinstance(lhs, str) and isinstance(rhs, str):
+            rhs = len(rhs)
+        elif isinstance(lhs, str) and isinstance(rhs, str):
+            lhs = len(lhs)
+            rhs = len(rhs)
+
+        if node.operator.type == GTE_TOKEN:
+            return lhs >= rhs
+        elif node.operator.type == GT_TOKEN:
+            return lhs > rhs
+        elif node.operator.type == LTE_TOKEN:
+            return lhs <= rhs
+        elif node.operator.type == LT_TOKEN:
+            return lhs < rhs
+
+    def do_StopNode(self, node):
+        if self.in_loop >= 0:
+            raise Exception
+        else:
+            self.pos = node.stop_tok.xy
+            self.error('stop_not_in_loop')
 
     def error(self, error_type, var_name=None, var_type=None):
 
@@ -1030,6 +1098,8 @@ class Interpreter:
             print(f'Alla riga {self.pos[1]} --> L\'argomento della radice non è un numero')
         elif error_type == 'id_none':
             print(f'Alla riga {self.pos[1]} --> Alla variabile \'{var_name}\' non è stato assegnato alcun valore')
+        elif error_type == 'stop_not_in_loop':
+            print(f'Alla riga {self.pos[1]} --> \'stop\' può essere utilizzato soltanto all\'interno dei cicli \'ripeti\'')
         raise Exception
 
 
@@ -1053,13 +1123,9 @@ def run(text):
     lexer = Lexer(text)
     tokens = lexer.lex()
 
-    # print(tokens)
     parser = Parser(tokens)
     tree = parser.parse()
-    # print(type(tree.right_child.brother.brother))
-    # print(tree.right_child.brother.brother)
 
     interpreter = Interpreter(tree)
     interpreter.interpret()
 
-    return ERROR
