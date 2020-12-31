@@ -21,4 +21,6 @@ inizio
         fine;
         i++;
     fine;
+    circonferenza = radice(circonferenza);
+    scrivi(circonferenza);
 fine.

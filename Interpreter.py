@@ -948,7 +948,8 @@ class Interpreter:
             return self.do_node(node.child) * (-1)  # BinaryOperationNode, ConstNode, UnaryOperationNode
         elif node.operator.type == 'RADICE':
             arg = self.do_node(node.child)
-            if type(arg) in ('int', 'float'):
+
+            if type(arg).__name__ in ('int', 'float'):
                 if arg >= 0:
                     return math.sqrt(arg)
                 else:
@@ -963,7 +964,7 @@ class Interpreter:
     def do_IncDecNode(self, node):
         if node.operator.type == INC_TOKEN:
             id_val = self.do_node(node.child)
-            print(type(id_val))
+            #print(type(id_val))
             if isinstance(id_val, (bool, str)):
                 self.pos = node.child.child.xy
                 self.error('id_not_num', node.child.child.value)

@@ -1,6 +1,3 @@
-INTERPRETER:
-
-dimenticato un print(type) in inc dec cercarlo
 
 
 
