@@ -41,13 +41,21 @@ KEYWORDS = ['INTERO', 'DECIMALE', 'STRINGA', 'BOOLEAN', 'INIZIO', 'FINE', 'STOP'
 
 TYPE_DIC = {'str': 'STRINGA', 'int': 'INTERO', 'float': 'DECIMALE', 'bool': 'BOOLEAN'}
 
+##############################################################################################
+##############################################################################################
+##############################################################################################
+##############################################################################################
 
+
+# classe per rappresentare i Token creati dall'analizzatore lessicale
+# un token tiene traccia della posizione nel file sorgente, oltre al tipo di token e all'eventuale valore
 class Token:
     def __init__(self, type, xy, value=None):
         self.value = value
         self.type = type
         self.xy = xy
 
+    # metodo di rappresentazione (debug)
     def __repr__(self):
         if self.value is None:
             # return f'{self.type},{self.xy}'
@@ -57,17 +65,20 @@ class Token:
             return f'{self.type}::{self.value}'
 
 
+# classe rappresentate l'analizzatore lessicale
 class Lexer:
     def __init__(self, text):
-        self.text = text
-        self.char = None
-        self.pos = -1
-        self.xy = [0, 1]
+        self.text = text  # codice sorgente da interpretare
+        self.char = None  # carattere corrente del codice sorgente
+        self.pos = -1  # posizione all'interno dell'array contente il codice sorgente
+        self.xy = [0, 1]  # posizione "human friendly" (x=colonna, y=riga)
         self.advance()
 
+    # metodo che ritorna la posizione corrente "human friendly"
     def get_xy(self):
         return [self.xy[0], self.xy[1]]
 
+    # metodo per avanzare
     def advance(self):
         self.pos += 1
         self.xy[0] += 1
