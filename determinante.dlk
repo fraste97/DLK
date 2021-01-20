@@ -1,0 +1,18 @@
+intero: a11, a12, a21, a22, det;
+
+inizio
+    scrivi("Inserire l'elemento a11:");
+    inserisci(a11);
+    scrivi("Inserire l'elemento a12:");
+    inserisci(a12);
+    scrivi("Inserire l'elemento a21:");
+    inserisci(a21);
+    scrivi("Inserire l'elemento a22:");
+    inserisci(a22);
+
+    det = a11*a22-a12*a21;
+
+    scrivi("Il determinante è:");
+    scrivi(det);
+
+fine.

@@ -1,0 +1,10 @@
+stringa: frase;
+
+inizio
+    scrivi("Inserire una parola da ripetere 10 volte:");
+    inserisci(frase);
+
+        ripeti 10 volte:
+            scrivi(frase);
+        fine;
+fine.
