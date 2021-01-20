@@ -450,16 +450,19 @@ class StopNode:
 
 class Parser:
     def __init__(self, tokens_list):
-        self.tokens_list = tokens_list
-        self.token = None
-        self.pos = -1
+        self.tokens_list = tokens_list  # lista di token da comporre nell'albero sintattico
+        self.token = None  # token corrente
+        self.pos = -1  # posizione all'interno della lista di token
         self.advance()
 
+    # metodo per l'avanzamento del parser
     def advance(self):
         self.pos += 1
         if self.pos < len(self.tokens_list):
             self.token = self.tokens_list[self.pos]
 
+    # metodo che dato un tipo di token controlla che il token corrente sia di quel tipo o meno
+    # in caso sia vero, il parser avanza
     def match(self, token_type):
         if self.token.type == token_type:
             self.advance()
@@ -467,12 +470,16 @@ class Parser:
         else:
             return False
 
+    # metodo per avviare il parser
+    # ritorna l'albero sintattico
     def parse(self):
         try:
             return self.program()
         except Exception:
             return ERROR
 
+    # metodo per l'esecuzione della produzione "program"
+    # se non ci sono errori, ritorna un RootNode
     def program(self):
         decl_list = None
         if self.token.type in ('INTERO', 'DECIMALE', 'STRINGA', 'BOOLEAN'):
@@ -486,6 +493,8 @@ class Parser:
         else:
             return RootNode(body)
 
+    # metodo per l'esecuzione della produzione "decl-list"
+    # se non ci sono errori, ritorna un DeclListNode
     def decl_list(self):
         child = self.decl()
         while self.token.type in ('INTERO', 'DECIMALE', 'STRINGA', 'BOOLEAN'):
@@ -493,6 +502,8 @@ class Parser:
             child = DeclListNode(child, brother)
         return child
 
+    # metodo per l'esecuzione della produzione "decl"
+    # se non ci sono errori, ritorna un DeclNode
     def decl(self):
         type = self.token
         self.advance()
@@ -505,6 +516,8 @@ class Parser:
         else:
             self.error(':')
 
+    # metodo per l'esecuzione della produzione "id-list"
+    # se non ci sono errori, ritorna un IdNode
     def id_list(self):
         if self.token.type == ID_TOKEN:
             entered = False
@@ -522,6 +535,8 @@ class Parser:
         else:
             self.error('id_expected')
 
+    # metodo per l'esecuzione della produzione "body"
+    # se non ci sono errori, ritorna un StatListNode
     def body(self):
         stat_list = self.stat_list()
         if self.match('FINE'):
@@ -531,6 +546,8 @@ class Parser:
             self.error('fine')
         return stat_list
 
+    # metodo per l'esecuzione della produzione "stat-list"
+    # se non ci sono errori, ritorna un StatNode
     def stat_list(self):
         if self.token.type == 'FINE':
             self.warning('empty_body')
@@ -547,6 +564,8 @@ class Parser:
             else:
                 return StatNode(child)
 
+    # metodo per l'esecuzione della produzione "stat"
+    # se non ci sono errori, ritorna o uno StopNode o ritorna il nodo ritornato da un metodo specifico per ogni tipo di stat
     def stat(self):
         if self.token.type == ID_TOKEN:
             if self.tokens_list[self.pos + 1].type == ASSIGN_TOKEN:
@@ -576,6 +595,8 @@ class Parser:
         else:
             self.error(';')
 
+    # metodo per l'esecuzione della produzione "assign-stat"
+    # se non ci sono errori, ritorna un AssignNode
     def assign_stat(self):
         if self.token.type == ID_TOKEN:
             id = self.token
@@ -591,6 +612,8 @@ class Parser:
         else:
             self.error('id_expected')
 
+    # metodo per l'esecuzione della produzione "rhs-assign-stat"
+    # se non ci sono errori, ritorna un ConstNode o il nodo ritornato dal metodo math_expr
     def rhs_assign_stat(self):
         if self.token.type in ('VERO', 'FALSO', STRINGA_TOKEN):
             value = self.token
@@ -599,6 +622,8 @@ class Parser:
         else:
             return self.math_expr()
 
+    # metodo per l'esecuzione della produzione "math-expr"
+    # se non ci sono errori, ritorna un BinaryOperationNode
     def math_expr(self):
         lhs = self.math_term()
 
@@ -610,6 +635,8 @@ class Parser:
 
         return lhs
 
+    # metodo per l'esecuzione della produzione "math-term"
+    # se non ci sono errori, ritorna un BinaryOperationNode
     def math_term(self):
         lhs = self.math_factor()
 
@@ -620,6 +647,8 @@ class Parser:
             lhs = BinaryOperationNode(lhs, op, rhs)
         return lhs
 
+    # metodo per l'esecuzione della produzione "math-factor"
+    # se non ci sono errori, ritorna un ConstNode o il Node ritornato da radice_stat o da math_expr
     def math_factor(self):
         token = self.token
         token_type = token.type
@@ -647,6 +676,8 @@ class Parser:
         else:
             self.error('factor_expected')
 
+    # metodo per l'esecuzione della produzione "radice-stat"
+    # se non ci sono errori, ritorna un UnaryOperationNode
     def radice_stat(self):
         sqrt = self.token
         self.advance()
@@ -659,6 +690,8 @@ class Parser:
         else:
             self.error('(_expected')
 
+    # metodo per l'esecuzione della produzione "se-stat"
+    # se non ci sono errori, ritorna un SeNode
     def se_stat(self):
         if self.match(LEFT_PAR_TOKEN):
             logical_expr = self.logical_expr()
@@ -692,12 +725,16 @@ class Parser:
         else:
             self.error('(_expected')
 
+    # metodo per l'esecuzione della produzione "altrimenti-stat"
+    # se non ci sono errori, ritorna il node ritornato dal metodo stat_list relativo al body dell'"altrimenti"
     def altrimenti_stat(self):
         if self.match(COLON_TOKEN):
             return self.stat_list()
         else:
             self.error(':')
 
+    # metodo per l'esecuzione della produzione "logiacl-expr"
+    # se non ci sono errori, ritorna un LogicalExprNode
     def logical_expr(self):
         lhs = self.rel_expr()
 
@@ -708,6 +745,8 @@ class Parser:
             lhs = LogicalExprNode(lhs, op, rhs)
         return lhs
 
+    # metodo per l'esecuzione della produzione "rel-expr"
+    # se non ci sono errori, ritorna un RelExprNode
     def rel_expr(self):
         lhs = self.rel_term()
 
@@ -718,6 +757,8 @@ class Parser:
             lhs = RelExprNode(lhs, op, rhs)
         return lhs
 
+    # metodo per l'esecuzione della produzione "rel-term"
+    # se non ci sono errori, ritorna un ConstNode
     def rel_term(self):
         token = self.token
         if token.type in (INTERO_TOKEN, DECIMALE_TOKEN, ID_TOKEN):
@@ -732,6 +773,8 @@ class Parser:
         else:
             self.error('term_expected')
 
+    # metodo per l'esecuzione della produzione "ripeti-stat"
+    # se non ci sono errori, ritorna un RipetiNode
     def ripeti_stat(self):
         if self.token.type == INTERO_TOKEN:
             num = self.token
@@ -753,6 +796,8 @@ class Parser:
         else:
             self.error('int_expected')
 
+    # metodo per l'esecuzione della produzione "scrivi-stat"
+    # se non ci sono errori, ritorna un ScriviNode
     def scrivi_stat(self):
         if self.match(LEFT_PAR_TOKEN):
             arg = self.scrivi_arg()
@@ -763,6 +808,8 @@ class Parser:
         else:
             self.error('(_expected')
 
+    # metodo per l'esecuzione della produzione "scrivi-arg"
+    # se non ci sono errori, ritorna un ConstNode
     def scrivi_arg(self):
         token = self.token
         if token.type in (ID_TOKEN, INTERO_TOKEN, DECIMALE_TOKEN, STRINGA_TOKEN):
@@ -771,6 +818,8 @@ class Parser:
         else:
             self.error('arg_expected')
 
+    # metodo per l'esecuzione della produzione "inserisci-stat"
+    # se non ci sono errori, ritorna un InserisciNode
     def inserisci_stat(self):
         if self.match(LEFT_PAR_TOKEN):
             if self.token.type == ID_TOKEN:
@@ -785,6 +834,8 @@ class Parser:
         else:
             self.error('(_expected')
 
+    # metodo per l'esecuzione della produzione "inc-dec-stat"
+    # se non ci sono errori, ritorna un IncDecNode
     def inc_dec_stat(self):
         id = self.token
         self.advance()
@@ -825,6 +876,7 @@ class Parser:
             print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> \'{self.token.type}\' non valido')
         raise Exception
 
+    # metodo per la rappresentazione di warning (corpo del programma/se/ripeti vuoiti)
     def warning(self, warning_type):
         print(f'{YELLOW_STRING}ATTENZIONE:')
         if warning_type == 'empty_body':
@@ -834,6 +886,12 @@ class Parser:
         elif warning_type == 'ripeti_empty_body':
             print(' --> Corpo del costrutto \'ripeti\' vuoto, non farà nulla!')
         raise Exception
+
+
+##############################################################################################
+##############################################################################################
+##############################################################################################
+##############################################################################################
 
 
 class SymbolTable:
