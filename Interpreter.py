@@ -41,6 +41,7 @@ KEYWORDS = ['INTERO', 'DECIMALE', 'STRINGA', 'BOOLEAN', 'INIZIO', 'FINE', 'STOP'
 
 TYPE_DIC = {'str': 'STRINGA', 'int': 'INTERO', 'float': 'DECIMALE', 'bool': 'BOOLEAN'}
 
+
 ##############################################################################################
 ##############################################################################################
 ##############################################################################################
@@ -99,7 +100,7 @@ class Lexer:
     # ritorna l'elenco dei tokens generati, se non ci sono errori
     def lex(self):
         try:
-            tokens = [] # array che conterrà l'elenco dei tokens
+            tokens = []  # array che conterrà l'elenco dei tokens
             while self.char is not None:
                 if self.char in '\t ':  # ignora spazi e \t
                     self.advance()
@@ -448,6 +449,7 @@ class StopNode:
         return f'{self.stop_tok.type}'
 
 
+# classe rappresentante il parser
 class Parser:
     def __init__(self, tokens_list):
         self.tokens_list = tokens_list  # lista di token da comporre nell'albero sintattico
@@ -573,7 +575,7 @@ class Parser:
             elif self.tokens_list[self.pos + 1].type in (DEC_TOKEN, INC_TOKEN):
                 stat = self.inc_dec_stat()
             elif self.tokens_list[self.pos + 1].type in (
-            ID_TOKEN, DEC_TOKEN, 'VERO', 'FALSO', INTERO_TOKEN, STRINGA_TOKEN):
+                    ID_TOKEN, DEC_TOKEN, 'VERO', 'FALSO', INTERO_TOKEN, STRINGA_TOKEN):
                 self.error('=')
             else:
                 self.error('++_--_expected')
@@ -893,19 +895,24 @@ class Parser:
 ##############################################################################################
 ##############################################################################################
 
-
+# classe rappresentante della symbol table
 class SymbolTable:
     def __init__(self):
-        self.table = {}
+        self.table = {}  # la symbol table, è un "dictionary"
 
+    # metodo per popolare la symbol table, quando le variabili vengono dichiarate
+    # salva nome della variabile e tipo se la variabile non è già stata dichiarate e ritorna True
+    # se invece la variabile è già stata dichiarata ritorna Falso
     def decl_operation(self, type, name):
         if name.value not in self.table:
             self.table[name.value] = [type.type, None]
-            # print(self.table)
+            # print(self.table) # debug
             return True
         else:
             return False
 
+    # metodo per assegnare ad una variabile il suo valore
+    # ritorna True se la variabile era stata dichiarata, altrimenti False
     def assign_operation(self, name, val):
         type_ = self.table[name.value][0]
         res = True
@@ -936,35 +943,43 @@ class SymbolTable:
         # print(self.table)
         return res
 
+    # metodo per controllare se una variabile è presente nella symbol table
     def check(self, id):
         if id.value in self.table:
             return True
         else:
             return False
 
+    # metodo per ottenere il valore di una variabile
     def get_value(self, id):
         return self.table[id.value][1]
 
 
+# classe rappresentante l'interprete
 class Interpreter:
     def __init__(self, tree):
-        self.tree = tree
-        self.pos = []
-        self.symbol_table = SymbolTable()
-        self.in_loop = -1
+        self.tree = tree  # albero sintattico
+        self.pos = []  # tiene traccia della posizione del token corrente quando si verifica un errore
+        self.symbol_table = SymbolTable()  # tiene un riferimento alla symbol table
+        self.in_loop = -1  # variabile per tenere traccia dei cicli (anche di quelli innestati)
 
+    # metodo generico per svolgere le operazioni relative ad un nodo
+    # sfrutta la programmazione ad oggetti
     def do_node(self, node):
         method = getattr(self, f'do_{type(node).__name__}')
         res = method(node)
         if res is not None:
             return res
 
+    # metodo per far partire l'interprete
     def interpret(self):
         try:
             self.do_node(self.tree)
         except:
             # traceback.print_exc() # Debugging
             return ERROR
+
+    # metodi con le operazioni svolte per ogni tipo di nodo, vengono chiamati attraverso il metodo do_node
 
     def do_RootNode(self, node):
         if node.left_child is not None:
@@ -1050,7 +1065,7 @@ class Interpreter:
     def do_IncDecNode(self, node):
         if node.operator.type == INC_TOKEN:
             id_val = self.do_node(node.child)
-            #print(type(id_val))
+            # print(type(id_val))
             if isinstance(id_val, (bool, str)):
                 self.pos = node.child.child.xy
                 self.error('id_not_num', node.child.child.value)
@@ -1089,7 +1104,8 @@ class Interpreter:
             print('VERO')
         else:
             # arg_to_print = bytes(arg_to_print, "utf-8").decode("unicode_escape")
-            arg_to_print = arg_to_print.replace('\\n', '\n')  # necessario, altrimenti verrebbe stampato \n e non andrebbe a capo
+            arg_to_print = arg_to_print.replace('\\n',
+                                                '\n')  # necessario, altrimenti verrebbe stampato \n e non andrebbe a capo
             arg_to_print = arg_to_print.replace('\\t', '\t')
             print(arg_to_print)
 
@@ -1162,6 +1178,7 @@ class Interpreter:
             self.pos = node.stop_tok.xy
             self.error('stop_not_in_loop')
 
+    # metodo per la gestione degli errori run time
     def error(self, error_type, var_name=None, var_type=None):
 
         print(f'{RED_STRING}ERRORE DURANTE L\'ESECUZIONE DEL PROGRAMMA:')
@@ -1174,7 +1191,8 @@ class Interpreter:
         elif error_type == 'type_mismatch':
             print(f'Alla riga {self.pos[1]} --> Il tipo della variabile \'{var_name}\' non è \'{TYPE_DIC[var_type]}\'')
         elif error_type == 'type_mismatch_inserisci':
-            print(f'Alla riga {self.pos[1]} --> Il tipo della variabile \'{var_name}\' non è \'{TYPE_DIC[var_type]}\' come il valore che hai inserito')
+            print(
+                f'Alla riga {self.pos[1]} --> Il tipo della variabile \'{var_name}\' non è \'{TYPE_DIC[var_type]}\' come il valore che hai inserito')
         elif error_type == 'sqrt_arg':
             print(f'Alla riga {self.pos[1]} --> L\'argomento della \'radice\' deve essere positivo')
         elif error_type == 'id_not_num':
@@ -1186,10 +1204,12 @@ class Interpreter:
         elif error_type == 'id_none':
             print(f'Alla riga {self.pos[1]} --> Alla variabile \'{var_name}\' non è stato assegnato alcun valore')
         elif error_type == 'stop_not_in_loop':
-            print(f'Alla riga {self.pos[1]} --> \'stop\' può essere utilizzato soltanto all\'interno dei cicli \'ripeti\'')
+            print(
+                f'Alla riga {self.pos[1]} --> \'stop\' può essere utilizzato soltanto all\'interno dei cicli \'ripeti\'')
         raise Exception
 
 
+# metodo per trasformare una stringa data in input nel corretto tipo
 def my_input():
     val = input()
     if val.upper() == 'VERO':
@@ -1206,6 +1226,7 @@ def my_input():
                 return val
 
 
+# metodo che riceve in input il codice sorgente e avvia lexer, parser e interprete
 def run(text):
     lexer = Lexer(text)
     tokens = lexer.lex()
@@ -1215,4 +1236,3 @@ def run(text):
 
     interpreter = Interpreter(tree)
     interpreter.interpret()
-
