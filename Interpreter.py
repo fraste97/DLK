@@ -71,14 +71,15 @@ class Lexer:
         self.text = text  # codice sorgente da interpretare
         self.char = None  # carattere corrente del codice sorgente
         self.pos = -1  # posizione all'interno dell'array contente il codice sorgente
-        self.xy = [0, 1]  # posizione "human friendly" (x=colonna, y=riga)
+        self.xy = [0, 1]  # posizione "human friendly" (x=colonna, y=riga) usata per segnalare errori
         self.advance()
 
     # metodo che ritorna la posizione corrente "human friendly"
     def get_xy(self):
         return [self.xy[0], self.xy[1]]
 
-    # metodo per avanzare
+    # metodo per fare avanzare l'analizzatore lessicale
+    # aggiorna posizione e carattere corrente
     def advance(self):
         self.pos += 1
         self.xy[0] += 1
@@ -88,18 +89,21 @@ class Lexer:
         else:
             self.char = None
 
+    # metodo per aggiornare la posizione "human friendly" quando il codice sorgento contiene un "a capo" \n
     def newline(self):
         self.xy[0] = 0
         self.xy[1] += 1
         self.advance()
 
+    # metodo per avviare l'analizzatore lessicale
+    # ritorna l'elenco dei tokens generati, se non ci sono errori
     def lex(self):
         try:
-            tokens = []
+            tokens = [] # array che conterrà l'elenco dei tokens
             while self.char is not None:
-                if self.char in '\t ':
+                if self.char in '\t ':  # ignora spazi e \t
                     self.advance()
-                elif self.char == '\n':
+                elif self.char == '\n':  # ignora \n e aggiorna la posizione "human friendly"
                     self.newline()
                 elif self.char in SUGAR:
                     tokens.append(self.sugar())
@@ -125,9 +129,10 @@ class Lexer:
             tokens.append(Token(EOF_TOKEN, self.get_xy()))
             return tokens
         except Exception as e:
-            # traceback.print_exc()
+            # traceback.print_exc() # debug
             return ERROR
 
+    # metodo per creare i token di ;:.-(),
     def sugar(self):
         if self.char == ';':
             return Token(SEMICOLON_TOKEN, self.get_xy())
@@ -142,6 +147,7 @@ class Lexer:
         elif self.char == ',':
             return Token(COMMA_TOKEN, self.get_xy())
 
+    # metodo per creare i token relativi agli operatori matematici
     def operator(self):
         start = self.get_xy()
         if self.char == '+':
@@ -164,6 +170,7 @@ class Lexer:
         elif self.char == '*':
             return Token(MUL_TOKEN, start)
 
+    # metodo per creare i token relativi agli operatori logici
     def rel_operator(self):
         start = self.get_xy()
         if self.char == '<':
@@ -191,6 +198,7 @@ class Lexer:
             else:
                 self.error('=_expected')
 
+    # metodo per creare i token relativi alle stringhe lessicali alfanumeriche (ID, KEYWORDS, VERO, FALSO)
     def alpha_num(self):
         string = self.char
         start = self.get_xy()
@@ -208,6 +216,7 @@ class Lexer:
         else:
             return Token(ID_TOKEN, start, string)
 
+    # metodo per creare i token relativi alle stringhe lessicali intconst o realconst
     def num_const(self):
         num = ''
         dot = 0
@@ -229,6 +238,7 @@ class Lexer:
         else:
             return Token(INTERO_TOKEN, start, int(num))
 
+    # metodo per creare i token relativi alle stringhe lessicali strconst
     def str_const(self):
         str_const = ''
         start = self.get_xy()
@@ -242,10 +252,12 @@ class Lexer:
         else:
             return Token(STRINGA_TOKEN, start, str_const)
 
+    # metodo per ignorare i commenti nel codice sorgente
     def comment(self):
         while self.char is not None and self.char != '\n':
             self.advance()
 
+    # metodo per la gestione e la rappresentazione degli errori sintattici individuabili dall'analizzatore lessicale
     def error(self, error_type):
         print(f'{RED_STRING}ERRORE DI SINTASSI:')
         if error_type == '"_expected':
@@ -264,6 +276,10 @@ class Lexer:
 ##############################################################################################
 ##############################################################################################
 ##############################################################################################
+
+# classi per la rappresentazione dei vari tipi di nodi generati dal parser
+# tutti hanno il metodo di rappresentazione utilizzato per il debug
+
 class RootNode:
     def __init__(self, right_child, left_child=None):
         self.left_child = left_child
@@ -776,6 +792,7 @@ class Parser:
         self.advance()
         return IncDecNode(op, ConstNode(id))
 
+    # metodo per la gestione e la rappresentazione degli errori sintattici
     def error(self, error_type):
         print(f'{RED_STRING}ERRORE DI SINTASSI:')
         if error_type == ')_expected':
