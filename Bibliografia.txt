@@ -1,0 +1,5 @@
+[1] Marc Prensky. Digital Natives, Digital Immigrants. On the Horizon, MCB University Press, Vol 9 No.5. 2001.
+[2] Paolo Ferri. Nativi digitali. Mondadori. 2011
+[3] Paolo Ferri. Nativi digitali puri e nativi digitali spuri. 2011.
+[4] Ada Lovelace. Nota G. 1953.
+[5] Raúl Rojas, Cüneyt Göktekin, Gerald Friedland, Mike Krüger. The First High-Level Programming Language and its Implementation. 2000.
