@@ -3,3 +3,5 @@
 [3] Paolo Ferri. Nativi digitali puri e nativi digitali spuri. 2011.
 [4] Ada Lovelace. Nota G. 1953.
 [5] Raúl Rojas, Cüneyt Göktekin, Gerald Friedland, Mike Krüger. The First High-Level Programming Language and its Implementation. 2000.
+[6] Logo Foundation. What is Logo?. 2015. URL: https://el.media.mit.edu/logo-foundation/what_is_logo/history.html
+[7] Cyberneticzoo.com. The Logo turtle. 2010. URL: http://cyberneticzoo.com/cyberneticanimals/1969-the-logo-turtle-seymour-papert-marvin-minsky-et-al-american/
