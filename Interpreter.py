@@ -763,7 +763,7 @@ class Parser:
     # se non ci sono errori, ritorna un ConstNode
     def rel_term(self):
         token = self.token
-        if token.type in (INTERO_TOKEN, DECIMALE_TOKEN, ID_TOKEN):
+        if token.type in (INTERO_TOKEN, DECIMALE_TOKEN, ID_TOKEN, STRINGA_TOKEN):
             self.advance()
             return ConstNode(token)
         elif self.match(LEFT_PAR_TOKEN):
@@ -864,7 +864,7 @@ class Parser:
             print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire o un numero o una variabile')
         elif error_type == 'term_expected':
             print(
-                f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire o un numero o una variabile o un espressione booleana')
+                f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire o un numero o una stringa o una variabile o un espressione booleana')
         elif error_type == 'int_expected':
             print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire un numero intero')
         elif error_type == 'arg_expected':
