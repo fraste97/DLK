@@ -18,9 +18,11 @@ while(stay_in_loop):
             text_file = open(file_name, encoding='utf-8')
             Interpreter.run(text_file.read())  # interpreta ed esegue il programma di cui è stato inserito l'indirizzo
             text_file.close
-            input("\033[0m\nProgramma terminato, premi invio per continuare")
+            input(f'\033[0m\nProgramma \'{file_name}\' terminato, premi invio per continuare')
         except:
             print(f'\033[91mImpossibile trovare il file: \'{file_name}\'')
             print('Controllare che il file sia nella stessa cartella dell\'interprete')
     else:
         stay_in_loop = False
+
+print('\033[0mArrivederci, a presto!')

@@ -1181,7 +1181,7 @@ class Interpreter:
     # metodo per la gestione degli errori run time
     def error(self, error_type, var_name=None, var_type=None):
 
-        print(f'{RED_STRING}ERRORE DURANTE L\'ESECUZIONE DEL PROGRAMMA:')
+        print(f'\n{RED_STRING}ERRORE DURANTE L\'ESECUZIONE DEL PROGRAMMA:')
         if error_type == 'div_0':
             print(f'Alla riga {self.pos[1]} --> Non si può dividere per \'0\'')
         elif error_type == 'id_already_symbol_table':
