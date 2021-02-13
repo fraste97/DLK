@@ -1099,15 +1099,15 @@ class Interpreter:
     def do_ScriviNode(self, node):
         arg_to_print = str(self.do_node(node.child))
         if arg_to_print == 'False':
-            print('FALSO')
+            print('FALSO', end='')
         elif arg_to_print == 'True':
-            print('VERO')
+            print('VERO', end='')
         else:
             # arg_to_print = bytes(arg_to_print, "utf-8").decode("unicode_escape")
             arg_to_print = arg_to_print.replace('\\n',
                                                 '\n')  # necessario, altrimenti verrebbe stampato \n e non andrebbe a capo
             arg_to_print = arg_to_print.replace('\\t', '\t')
-            print(arg_to_print)
+            print(arg_to_print, end='')
 
     def do_InserisciNode(self, node):
         input_val = my_input()

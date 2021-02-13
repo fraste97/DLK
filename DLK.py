@@ -25,4 +25,4 @@ while(stay_in_loop):
     else:
         stay_in_loop = False
 
-print('\033[0mArrivederci, a presto!')
+print('\033[0mArrivederci, a presto!\n')
