@@ -417,9 +417,10 @@ class SeNode:
 
 
 class RipetiNode:
-    def __init__(self, num_token, child):
+    def __init__(self, num_token, child, pos):
         self.child = child
         self.num_token = num_token
+        self.pos = pos
 
     def __repr__(self):
         return f'(ripeti{self.child})'
@@ -778,15 +779,15 @@ class Parser:
     # metodo per l'esecuzione della produzione "ripeti-stat"
     # se non ci sono errori, ritorna un RipetiNode
     def ripeti_stat(self):
-        if self.token.type == INTERO_TOKEN:
-            num = self.token
-            self.advance()
+        ripeti_pos = self.tokens_list[self.pos-1].xy
+        if self.token.type in (INTERO_TOKEN, DECIMALE_TOKEN, ID_TOKEN, LEFT_PAR_TOKEN, MIN_TOKEN, PLUS_TOKEN):
+            num = self.math_expr()
             if self.match('VOLTE'):
                 if self.match(COLON_TOKEN):
                     if self.token.type != 'FINE':
                         stat = self.stat_list()
                         if self.match('FINE'):
-                            return RipetiNode(num, stat)
+                            return RipetiNode(num, stat, ripeti_pos)
                         else:
                             self.error('fine')
                     else:
@@ -796,7 +797,7 @@ class Parser:
             else:
                 self.error('volte')
         else:
-            self.error('int_expected')
+            self.error('expr_expected')
 
     # metodo per l'esecuzione della produzione "scrivi-stat"
     # se non ci sono errori, ritorna un ScriviNode
@@ -814,9 +815,14 @@ class Parser:
     # se non ci sono errori, ritorna un ConstNode
     def scrivi_arg(self):
         token = self.token
-        if token.type in (ID_TOKEN, INTERO_TOKEN, DECIMALE_TOKEN, STRINGA_TOKEN):
+        if token.type == STRINGA_TOKEN:
             self.advance()
             return ConstNode(token)
+        elif token.type in (ID_TOKEN, INTERO_TOKEN, DECIMALE_TOKEN, LEFT_PAR_TOKEN, MIN_TOKEN, PLUS_TOKEN, 'RADICE'):
+            if self.tokens_list[self.pos+1].type in ('E', 'O', GTE_TOKEN, GT_TOKEN, LT_TOKEN, LTE_TOKEN, EQ_TOKEN, NEQ_TOKEN):
+                return self.logical_expr()
+            else:
+                return self.math_expr()
         else:
             self.error('arg_expected')
 
@@ -865,11 +871,11 @@ class Parser:
         elif error_type == 'term_expected':
             print(
                 f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire o un numero o una stringa o una variabile o un espressione booleana')
-        elif error_type == 'int_expected':
-            print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire un numero intero')
+        elif error_type == 'expr_expected':
+            print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire un numero o una variabile o un\'espressione matematica')
         elif error_type == 'arg_expected':
             print(
-                f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire una stringa o un numero o una variabile')
+                f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> Inserire una stringa o un numero o una variabile o un\'espressione')
         elif error_type in (';', 'fine', '=', '.', ':', 'vero', 'volte', 'inizio'):
             print(f'Riga {self.token.xy[1]}, colonna {self.token.xy[0]} --> \'{error_type}\' mancante')
         elif error_type == '++_--_expected':
@@ -1122,8 +1128,17 @@ class Interpreter:
     def do_RipetiNode(self, node):
         try:
             self.in_loop += 1
-            for i in range(node.num_token.value):
-                self.do_node(node.child)
+            rep = self.do_node(node.num_token)
+            if isinstance(rep, float) or isinstance(rep, int):
+                if rep >= 0:
+                    for i in range(int(rep)):
+                        self.do_node(node.child)
+                else:
+                    self.pos = node.pos
+                    self.error('arg_neg_ripeti')
+            else:
+                self.pos = node.pos
+                self.error('not_num_ripeti')
         except:
             pass
         self.in_loop -= 1
@@ -1206,6 +1221,10 @@ class Interpreter:
         elif error_type == 'stop_not_in_loop':
             print(
                 f'Alla riga {self.pos[1]} --> \'stop\' può essere utilizzato soltanto all\'interno dei cicli \'ripeti\'')
+        elif error_type == 'not_num_ripeti':
+            print(f'Alla riga {self.pos[1]} --> L\'argomento del ciclo \'ripeti\' non né un numero né un\'espressione matematica')
+        elif error_type == 'arg_neg_ripeti':
+            print(f'Alla riga {self.pos[1]} --> L\'argomento del ciclo \'ripeti\' deve essere positivo')
         raise Exception
 
 
