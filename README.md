@@ -5,5 +5,9 @@
 ## About this repository
 In this repository you can find: my thesis, the DLK interpreter and some easy example written in DLK.
 
+## The interpreter
+In order to use the interpreter, you have to run **DLK.py** and then follow the textual instructions.  
+The DLK interpreter works only with textual file (.txt or .dlk extensions).
+
 ## Requirements
 * [Python 3.8 or latest](https://www.python.org/downloads/)
