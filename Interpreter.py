@@ -780,7 +780,7 @@ class Parser:
     # se non ci sono errori, ritorna un RipetiNode
     def ripeti_stat(self):
         ripeti_pos = self.tokens_list[self.pos-1].xy
-        if self.token.type in (INTERO_TOKEN, DECIMALE_TOKEN, ID_TOKEN, LEFT_PAR_TOKEN, MIN_TOKEN, PLUS_TOKEN):
+        if self.token.type in (INTERO_TOKEN, DECIMALE_TOKEN, ID_TOKEN, LEFT_PAR_TOKEN, MIN_TOKEN, PLUS_TOKEN, 'RADICE'):
             num = self.math_expr()
             if self.match('VOLTE'):
                 if self.match(COLON_TOKEN):

@@ -1,0 +1,70 @@
+stringa: RICHIESTA, QUADRATO, BASE, ALTEZZA, RAGGIO, ERRORE, AREA, AREANEGATIVA, SALUTI;
+intero: scelta;
+decimale: PIGRECO, lato, base, altezza, raggio, area;
+boolean: ok;
+
+inizio
+PIGRECO = 3.1415;
+
+RICHIESTA = "Inserire:\n1 per calcolare l'area di un quadrato\n2 per calcolare l'area di un rettangolo\n3 per calcolare l'area di un triangolo\n4 per calcolare l'area di un cerchio\n0 per uscire\n--> ";
+QUADRATO = "\nInserire la lunghezza del lato --> ";
+BASE = "\nInserire la lunghezza della base --> "; 
+ALTEZZA = "Inserire la lunghezza dell'altezza --> ";
+RAGGIO = "\nInserire la lunghezza del raggio --> ";
+ERRORE = "\nInserire un'opzione di scelta valida!\n\n";
+AREA = "\nL'area è: ";
+AREANEGATIVA = "\nAttenzione, l'area risulta essere negativa, inserire lunghezze positive!\n\n";
+SALUTI = "\nArrivederci, alla prossima!\n";
+
+ripeti 1000 volte:
+	ok = vero;
+	scrivi(RICHIESTA);
+	inserisci(scelta);
+
+	se(scelta == 0) vero fai: //Esco dal programma
+		stop; 
+	altrimenti: //Calcolo aree
+		se(scelta == 1) vero fai: //Quadrato
+			scrivi(QUADRATO);
+			inserisci(lato);
+			area = lato*lato;
+		altrimenti:
+			se(scelta == 2) vero fai: //Rettangolo
+				scrivi(BASE);
+				inserisci(base);
+				scrivi(ALTEZZA);
+				inserisci(altezza);
+				area = base*altezza;
+			altrimenti:
+				se(scelta == 3) vero fai: //Triangolo
+					scrivi(BASE);
+					inserisci(base);
+					scrivi(ALTEZZA);
+					inserisci(altezza);
+					area = base*altezza/2;
+				altrimenti:
+					se(scelta == 4) vero fai://Cerchio
+						scrivi(RAGGIO);
+						inserisci(raggio);
+						area = raggio*raggio*PIGRECO;
+					altrimenti: //Valore errato
+						scrivi(ERRORE); 
+						ok = falso;
+					fine;
+				fine;
+			fine;
+		fine;
+	fine;
+	se(ok) vero fai: //Controllo non ci siano stati errori
+		se(area>=0) vero fai:
+			//Presentazione risultato
+			scrivi(AREA);
+			scrivi(area);
+			scrivi("\n\n");
+		altrimenti:
+			scrivi(AREANEGATIVA);
+		fine;
+	fine;
+fine;
+scrivi(SALUTI);
+fine.
